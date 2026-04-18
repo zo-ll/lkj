@@ -32,6 +32,8 @@ HOTKEY_TOKEN_MAP = {
 
 
 NO_VOICE_AUTO_STOP_MIN_SECONDS = 6.0
+AUTO_STOP_ACTIVITY_MIN_THRESHOLD = 0.01
+MAX_RECORDING_SECONDS = 20.0
 LOW_AUDIO_PEAK = 0.08
 TARGET_AUDIO_PEAK = 0.25
 MAX_AUTO_GAIN = 30.0
@@ -137,7 +139,12 @@ class PushToTalkApp:
             if self._is_recording:
                 return
 
-            self.recorder.begin_capture(silence_threshold=self.config.silence_threshold)
+            self.recorder.begin_capture(
+                silence_threshold=max(
+                    self.config.silence_threshold,
+                    AUTO_STOP_ACTIVITY_MIN_THRESHOLD,
+                )
+            )
             self._is_recording = True
             self._recording_started_at = time.monotonic()
         print("Recording started")
@@ -154,6 +161,8 @@ class PushToTalkApp:
 
         if reason == "silence":
             print("Recording stopped automatically. Transcribing...")
+        elif reason == "timeout":
+            print("Recording auto-stopped at time limit. Transcribing...")
         else:
             print("Recording stopped. Transcribing...")
         send_notification("LKJ", "Recording stopped")
@@ -202,6 +211,10 @@ class PushToTalkApp:
         has_voice, last_voice_time, _last_peak = self.recorder.capture_activity()
         now = time.monotonic()
 
+        if started_at is not None and now - started_at >= MAX_RECORDING_SECONDS:
+            self._stop_capture(reason="timeout")
+            return
+
         if has_voice and last_voice_time is not None:
             silent_for = now - last_voice_time
             if silent_for >= self.config.auto_stop_silence_seconds:
@@ -246,6 +259,14 @@ class PushToTalkApp:
 
     def run(self) -> None:
         self.recorder.start()
+
+        print("Loading ASR model...")
+        try:
+            self.transcriber.load()
+            print("ASR model ready")
+        except Exception as exc:
+            print(f"ASR preload failed: {exc}")
+
         if self._stop_hotkey is None:
             print(
                 f"Ready. Press {self.config.start_hotkey} to start/stop recording. Ctrl+C to exit."

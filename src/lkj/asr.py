@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -14,27 +15,32 @@ class ParakeetTranscriber:
         self.device = device
         self.offline_only = offline_only
         self._model: Any | None = None
+        self._load_lock = threading.Lock()
 
     def load(self) -> None:
         if self._model is not None:
             return
 
-        if self.offline_only:
-            os.environ.setdefault("HF_HUB_OFFLINE", "1")
-            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+        with self._load_lock:
+            if self._model is not None:
+                return
 
-        import torch
-        from nemo.collections.asr.models import ASRModel
+            if self.offline_only:
+                os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-        target_device = self.device
-        if self.device == "cuda" and not torch.cuda.is_available():
-            target_device = "cpu"
+            import torch
+            from nemo.collections.asr.models import ASRModel
 
-        self._model = ASRModel.from_pretrained(
-            model_name=self.model_name,
-            map_location=torch.device(target_device),
-        )
-        self._model.eval()
+            target_device = self.device
+            if self.device == "cuda" and not torch.cuda.is_available():
+                target_device = "cpu"
+
+            self._model = ASRModel.from_pretrained(
+                model_name=self.model_name,
+                map_location=torch.device(target_device),
+            )
+            self._model.eval()
 
     def _normalize_output(self, raw: Any) -> str:
         if raw is None:
@@ -71,6 +77,11 @@ class ParakeetTranscriber:
             kwargs["audio"] = [str(path)]
         else:
             kwargs["paths2audio_files"] = [str(path)]
+
+        if "use_lhotse" in params:
+            kwargs["use_lhotse"] = False
+        if "num_workers" in params:
+            kwargs["num_workers"] = 0
 
         output = transcribe_fn(**kwargs)
         return self._normalize_output(output)
