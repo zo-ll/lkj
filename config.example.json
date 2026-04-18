@@ -1,0 +1,10 @@
+{
+  "model_name": "nvidia/parakeet-tdt-0.6b-v2",
+  "device": "cuda",
+  "sample_rate": 16000,
+  "channels": 1,
+  "push_key": "f8",
+  "min_seconds": 0.2,
+  "offline_only": true,
+  "transcript_log_path": "~/.local/share/lkj/transcripts.log"
+}

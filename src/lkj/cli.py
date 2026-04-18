@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .app import PushToTalkApp, transcribe_once
 from .config import AppConfig, load_config
 
 
@@ -33,6 +32,9 @@ def _build_parser() -> argparse.ArgumentParser:
     once = subparsers.add_parser("once", help="Record once and transcribe")
     once.add_argument("--seconds", type=float, default=5.0, help="Seconds to record")
 
+    doctor = subparsers.add_parser("doctor", help="Run environment diagnostics")
+    doctor.add_argument("--warmup", action="store_true", help="Load model during diagnostics")
+
     return parser
 
 
@@ -59,12 +61,22 @@ def main() -> None:
     config = _resolve_config(args)
 
     if args.command == "run":
+        from .app import PushToTalkApp
+
         PushToTalkApp(config).run()
         return
 
     if args.command == "once":
+        from .app import transcribe_once
+
         transcribe_once(config, seconds=args.seconds)
         return
+
+    if args.command == "doctor":
+        from .doctor import run_doctor
+
+        code = run_doctor(config, warmup=args.warmup)
+        raise SystemExit(code)
 
     parser.error(f"Unknown command: {args.command}")
 
