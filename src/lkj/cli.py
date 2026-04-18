@@ -1,5 +1,72 @@
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from .app import PushToTalkApp, transcribe_once
+from .config import AppConfig, load_config
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="lkj", description="Local Parakeet push-to-talk")
+    parser.add_argument("--config", type=Path, default=None, help="Path to JSON config file")
+    parser.add_argument("--model", type=str, default=None, help="Model name")
+    parser.add_argument("--device", type=str, default=None, help="Device (cuda or cpu)")
+    parser.add_argument("--push-key", type=str, default=None, help="Push-to-talk key")
+    parser.add_argument("--sample-rate", type=int, default=None, help="Recording sample rate")
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        default=None,
+        help="Enable offline mode for model loading",
+    )
+    parser.add_argument(
+        "--online",
+        action="store_true",
+        default=None,
+        help="Disable offline mode for model loading",
+    )
+
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("run", help="Run push-to-talk mode")
+
+    once = subparsers.add_parser("once", help="Record once and transcribe")
+    once.add_argument("--seconds", type=float, default=5.0, help="Seconds to record")
+
+    return parser
+
+
+def _resolve_config(args: argparse.Namespace) -> AppConfig:
+    offline_value = None
+    if args.offline:
+        offline_value = True
+    if args.online:
+        offline_value = False
+
+    return load_config(
+        config_path=args.config,
+        model_name=args.model,
+        device=args.device,
+        push_key=args.push_key,
+        sample_rate=args.sample_rate,
+        offline_only=offline_value,
+    )
+
+
 def main() -> None:
-    print("lkj bootstrap complete")
+    parser = _build_parser()
+    args = parser.parse_args()
+    config = _resolve_config(args)
+
+    if args.command == "run":
+        PushToTalkApp(config).run()
+        return
+
+    if args.command == "once":
+        transcribe_once(config, seconds=args.seconds)
+        return
+
+    parser.error(f"Unknown command: {args.command}")
 
 
 if __name__ == "__main__":
