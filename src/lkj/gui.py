@@ -58,6 +58,7 @@ class SettingsWindow:
             value=str(self.config.silence_threshold)
         )
         self._offline_only_var = tk.BooleanVar(value=self.config.offline_only)
+        self._save_transcripts_var = tk.BooleanVar(value=self.config.save_transcripts)
         self._transcript_log_var = tk.StringVar(
             value=str(self.config.transcript_log_path)
         )
@@ -105,14 +106,21 @@ class SettingsWindow:
         )
         offline.grid(row=15, column=0, columnspan=2, sticky="w", pady=(2, 4))
 
+        save_transcripts = ttk.Checkbutton(
+            frame,
+            text="Save transcripts to log file",
+            variable=self._save_transcripts_var,
+        )
+        save_transcripts.grid(row=16, column=0, columnspan=2, sticky="w", pady=(2, 4))
+
         note = ttk.Label(
             frame,
             text="If daemon is installed, Save automatically restarts it.",
         )
-        note.grid(row=16, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        note.grid(row=17, column=0, columnspan=2, sticky="w", pady=(0, 8))
 
         button_row = ttk.Frame(frame)
-        button_row.grid(row=17, column=0, columnspan=2, sticky="e")
+        button_row.grid(row=18, column=0, columnspan=2, sticky="e")
 
         save_button = ttk.Button(button_row, text="Save", command=self._save)
         save_button.grid(row=0, column=0, padx=(0, 6))
@@ -121,7 +129,7 @@ class SettingsWindow:
         close_button.grid(row=0, column=1)
 
         status = ttk.Label(frame, textvariable=self._status_var)
-        status.grid(row=18, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        status.grid(row=19, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
     def _add_entry(
         self,
@@ -285,6 +293,7 @@ class SettingsWindow:
             auto_stop_silence_seconds=auto_stop_silence_seconds,
             silence_threshold=silence_threshold,
             offline_only=bool(self._offline_only_var.get()),
+            save_transcripts=bool(self._save_transcripts_var.get()),
             transcript_log_path=Path(
                 self._transcript_log_var.get().strip()
             ).expanduser(),
