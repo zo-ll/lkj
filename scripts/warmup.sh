@@ -12,7 +12,7 @@ fi
 echo "Running doctor"
 .venv/bin/python -m lkj.cli doctor
 
-echo "Running one online warmup transcription"
-.venv/bin/python -m lkj.cli --online once --seconds 4
+echo "Downloading/loading model cache"
+.venv/bin/python -m lkj.cli --online doctor --warmup
 
 echo "Warmup complete. Daily command: .venv/bin/python -m lkj.cli run"
