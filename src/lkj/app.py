@@ -104,7 +104,8 @@ class PushToTalkApp:
 
     def _publish_transcript(self, text: str) -> None:
         copied = copy_to_clipboard(text)
-        append_transcript(self.config.transcript_log_path, text)
+        if self.config.save_transcripts:
+            append_transcript(self.config.transcript_log_path, text)
         if copied:
             print("Transcript copied to clipboard")
             send_notification("LKJ", "Transcription copied")
@@ -451,7 +452,8 @@ def transcribe_once(config: AppConfig, seconds: float) -> None:
         return
 
     copied = copy_to_clipboard(text)
-    append_transcript(config.transcript_log_path, text)
+    if config.save_transcripts:
+        append_transcript(config.transcript_log_path, text)
     if copied:
         print("Transcript copied to clipboard")
         send_notification("LKJ", "Transcription copied")
