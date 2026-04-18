@@ -123,6 +123,12 @@ class SettingsWindow:
         if not normalized:
             return SYSTEM_DEFAULT_LABEL
 
+        if normalized.isdigit():
+            prefix = f"{normalized}:"
+            for label in self._input_device_options:
+                if label.startswith(prefix):
+                    return label
+
         for label, mapped in self._input_device_map.items():
             if mapped == normalized:
                 return label
@@ -300,7 +306,7 @@ def _discover_input_devices() -> tuple[list[str], dict[str, str]]:
                 label = f"{label} [default]"
 
             options.append(label)
-            mapping[label] = str(index)
+            mapping[label] = name
     except Exception:
         pass
 

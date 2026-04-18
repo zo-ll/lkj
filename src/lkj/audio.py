@@ -50,6 +50,55 @@ class MicrophoneRecorder:
         self._last_voice_time: float | None = None
         self._last_peak = 0.0
 
+    def _resolve_input_device(self) -> int | None:
+        target = self.input_device.strip()
+        if not target:
+            return None
+
+        try:
+            devices = sd.query_devices()
+        except Exception:
+            return None
+
+        input_indexes = [
+            index
+            for index, device in enumerate(devices)
+            if int(device.get("max_input_channels", 0) or 0) > 0
+        ]
+        if not input_indexes:
+            return None
+
+        parsed = target
+        if ":" in parsed:
+            parsed = parsed.split(":", 1)[0].strip()
+
+        if parsed.isdigit():
+            index = int(parsed)
+            if index in input_indexes:
+                return index
+
+        normalized = target.lower()
+        for index in input_indexes:
+            name = str(devices[index].get("name", ""))
+            if name.lower() == normalized:
+                return index
+
+        for index in input_indexes:
+            name = str(devices[index].get("name", ""))
+            if normalized in name.lower() or name.lower() in normalized:
+                return index
+
+        return None
+
+    def _open_stream(self, device: int | None) -> sd.InputStream:
+        return sd.InputStream(
+            samplerate=self.sample_rate,
+            channels=self.channels,
+            dtype="float32",
+            callback=self._callback,
+            device=device,
+        )
+
     def _callback(self, indata: np.ndarray, frames: int, callback_time, status) -> None:
         del frames, callback_time
         if status:
@@ -74,13 +123,12 @@ class MicrophoneRecorder:
         if self._stream is not None:
             return
 
-        self._stream = sd.InputStream(
-            samplerate=self.sample_rate,
-            channels=self.channels,
-            dtype="float32",
-            callback=self._callback,
-            device=self.input_device or None,
-        )
+        device = self._resolve_input_device()
+        try:
+            self._stream = self._open_stream(device)
+        except Exception:
+            self._stream = self._open_stream(None)
+
         self._stream.start()
 
     def close(self) -> None:
@@ -119,12 +167,23 @@ class MicrophoneRecorder:
 
     def record_blocking(self, seconds: float) -> np.ndarray:
         frames = int(seconds * self.sample_rate)
-        audio = sd.rec(
-            frames,
-            samplerate=self.sample_rate,
-            channels=1,
-            dtype="float32",
-            device=self.input_device or None,
-        )
+        device = self._resolve_input_device()
+
+        try:
+            audio = sd.rec(
+                frames,
+                samplerate=self.sample_rate,
+                channels=1,
+                dtype="float32",
+                device=device,
+            )
+        except Exception:
+            audio = sd.rec(
+                frames,
+                samplerate=self.sample_rate,
+                channels=1,
+                dtype="float32",
+            )
+
         sd.wait()
         return np.squeeze(audio, axis=1).astype(np.float32)
