@@ -326,19 +326,26 @@ class PushToTalkApp:
                 self._busy = False
             print(f"Hotkey handler error: {exc}")
 
+    def _preload_model_async(self) -> None:
+        """Background thread that loads and warms up the model."""
+        try:
+            self.transcriber.load()
+            self.transcriber.warmup(sample_rate=self.config.sample_rate)
+            self._mark_model_use()
+        except Exception as exc:
+            print(f"ASR preload failed: {exc}")
+
     def run(self) -> None:
         self.recorder.start()
 
+        # Start model loading in background immediately for fast "Ready" response
         if self.config.preload_model:
-            print("Loading ASR model...")
-            try:
-                self.transcriber.load()
-                print("Warming ASR runtime...")
-                self.transcriber.warmup(sample_rate=self.config.sample_rate)
-                self._mark_model_use()
-                print("ASR model ready")
-            except Exception as exc:
-                print(f"ASR preload failed: {exc}")
+            preload_thread = threading.Thread(
+                target=self._preload_model_async,
+                daemon=True,
+                name="ModelPreloader",
+            )
+            preload_thread.start()
 
         if self._stop_hotkey is None:
             mode = (
