@@ -37,6 +37,7 @@ What install does:
 ## Daily usage
 
 - Open settings from app launcher/rofi (`LKJ`) or run `lkj`.
+- In settings, choose `Input device` from the dropdown list (or type a custom value).
 - Recording does not start when opening settings.
 - Press `start_hotkey` to begin recording.
 - Recording stops automatically after trailing silence.

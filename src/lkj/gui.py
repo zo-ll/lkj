@@ -10,6 +10,9 @@ from tkinter import messagebox, ttk
 from .config import DEFAULT_CONFIG_PATH, load_config, save_config
 
 
+SYSTEM_DEFAULT_LABEL = "system default"
+
+
 class SettingsWindow:
     def __init__(self, config_path: Path | None = None) -> None:
         self.config_path = config_path or DEFAULT_CONFIG_PATH
@@ -23,7 +26,10 @@ class SettingsWindow:
 
         self._model_name_var = tk.StringVar(value=self.config.model_name)
         self._device_var = tk.StringVar(value=self.config.device)
-        self._input_device_var = tk.StringVar(value=self.config.input_device)
+        self._input_device_options, self._input_device_map = _discover_input_devices()
+        self._input_device_var = tk.StringVar(
+            value=self._label_for_input_device(self.config.input_device)
+        )
         self._sample_rate_var = tk.StringVar(value=str(self.config.sample_rate))
         self._channels_var = tk.StringVar(value=str(self.config.channels))
         self._start_hotkey_var = tk.StringVar(value=self.config.start_hotkey)
@@ -45,10 +51,11 @@ class SettingsWindow:
     def _build(self) -> None:
         frame = ttk.Frame(self.root, padding=14)
         frame.grid(row=0, column=0, sticky="nsew")
+        frame.columnconfigure(1, weight=1)
 
         self._add_entry(frame, 0, "Model", self._model_name_var)
         self._add_entry(frame, 1, "Device", self._device_var)
-        self._add_entry(frame, 2, "Input device", self._input_device_var)
+        self._add_input_device_selector(frame, 2)
         self._add_entry(frame, 3, "Sample rate", self._sample_rate_var)
         self._add_entry(frame, 4, "Channels", self._channels_var)
         self._add_entry(frame, 5, "Start hotkey", self._start_hotkey_var)
@@ -96,6 +103,54 @@ class SettingsWindow:
         entry = ttk.Entry(frame, textvariable=variable, width=48)
         entry.grid(row=row, column=1, sticky="ew", pady=2)
 
+    def _add_input_device_selector(self, frame: ttk.Frame, row: int) -> None:
+        widget = ttk.Label(frame, text="Input device")
+        widget.grid(row=row, column=0, sticky="w", padx=(0, 10), pady=2)
+
+        self._input_device_combo = ttk.Combobox(
+            frame,
+            textvariable=self._input_device_var,
+            values=self._input_device_options,
+            width=48,
+        )
+        self._input_device_combo.grid(row=row, column=1, sticky="ew", pady=2)
+
+        refresh = ttk.Button(frame, text="Refresh", command=self._refresh_input_devices)
+        refresh.grid(row=row, column=2, sticky="w", padx=(6, 0), pady=2)
+
+    def _label_for_input_device(self, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            return SYSTEM_DEFAULT_LABEL
+
+        for label, mapped in self._input_device_map.items():
+            if mapped == normalized:
+                return label
+
+        return normalized
+
+    def _resolve_input_device(self) -> str:
+        selected = self._input_device_var.get().strip()
+        if not selected or selected == SYSTEM_DEFAULT_LABEL:
+            return ""
+
+        mapped = self._input_device_map.get(selected)
+        if mapped is not None:
+            return mapped
+
+        prefix = selected.split(":", 1)[0].strip()
+        if prefix.isdigit():
+            return prefix
+
+        return selected
+
+    def _refresh_input_devices(self) -> None:
+        current = self._resolve_input_device()
+        self._input_device_options, self._input_device_map = _discover_input_devices()
+        self._input_device_combo.configure(values=self._input_device_options)
+        self._input_device_var.set(self._label_for_input_device(current))
+        self._status_var.set("Input device list refreshed")
+
     def _save(self) -> None:
         try:
             sample_rate = int(self._sample_rate_var.get().strip())
@@ -135,7 +190,7 @@ class SettingsWindow:
             self.config,
             model_name=self._model_name_var.get().strip(),
             device=self._device_var.get().strip(),
-            input_device=self._input_device_var.get().strip(),
+            input_device=self._resolve_input_device(),
             sample_rate=sample_rate,
             channels=channels,
             start_hotkey=start_hotkey,
@@ -215,3 +270,38 @@ def _restart_daemon_if_installed() -> bool:
 def run_settings_window(config_path: Path | None = None) -> None:
     window = SettingsWindow(config_path=config_path)
     window.run()
+
+
+def _discover_input_devices() -> tuple[list[str], dict[str, str]]:
+    options = [SYSTEM_DEFAULT_LABEL]
+    mapping = {SYSTEM_DEFAULT_LABEL: ""}
+
+    try:
+        import sounddevice as sd
+
+        default_input: int | None = None
+        default_device = sd.default.device
+        if isinstance(default_device, (list, tuple)) and default_device:
+            if default_device[0] is not None:
+                default_input = int(default_device[0])
+        elif isinstance(default_device, int):
+            default_input = default_device
+
+        devices = sd.query_devices()
+        for index, device in enumerate(devices):
+            input_channels = int(device.get("max_input_channels", 0) or 0)
+            if input_channels <= 0:
+                continue
+
+            name = str(device.get("name", f"device {index}"))
+            sample_rate = int(float(device.get("default_samplerate", 0) or 0))
+            label = f"{index}: {name} ({input_channels}ch @ {sample_rate}Hz)"
+            if default_input is not None and index == default_input:
+                label = f"{label} [default]"
+
+            options.append(label)
+            mapping[label] = str(index)
+    except Exception:
+        pass
+
+    return options, mapping

@@ -88,7 +88,7 @@ def copy_to_clipboard(text: str) -> bool:
 
     if os.environ.get("DISPLAY") and shutil.which("xclip"):
         if _copy_with_owner_process(
-            ["xclip", "-selection", "clipboard", "-loops", "1"],
+            ["xclip", "-selection", "clipboard", "-quiet"],
             text,
         ):
             return True
