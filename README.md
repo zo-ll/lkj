@@ -20,17 +20,20 @@ Local-only push-to-talk voice-to-text app using NVIDIA Parakeet.
 
 ```bash
 cd /home/az/projects/lkj
-python3.12 -m venv .venv
+./scripts/bootstrap.sh
 source .venv/bin/activate
-pip install --upgrade pip
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-pip install -e .
 ```
 
 First run (allow network one time for model download):
 
 ```bash
 lkj --online once --seconds 5
+```
+
+or:
+
+```bash
+./scripts/warmup.sh
 ```
 
 Daily run (offline by default):
