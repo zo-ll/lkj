@@ -21,6 +21,7 @@ class AppConfig:
     channels: int = 1
     start_hotkey: str = "alt+space"
     stop_hotkey: str = ""
+    auto_stop_enabled: bool = False
     min_seconds: float = 0.20
     auto_stop_silence_seconds: float = 1.8
     silence_threshold: float = 0.003
@@ -53,6 +54,8 @@ def _from_dict(data: dict[str, object]) -> AppConfig:
         config.start_hotkey = str(data["push_key"])
     if "stop_hotkey" in data:
         config.stop_hotkey = str(data["stop_hotkey"])
+    if "auto_stop_enabled" in data:
+        config.auto_stop_enabled = bool(data["auto_stop_enabled"])
     if "min_seconds" in data:
         config.min_seconds = float(data["min_seconds"])
     if "auto_stop_silence_seconds" in data:
@@ -121,6 +124,7 @@ def save_config(config: AppConfig, config_path: Path | None = None) -> Path:
         "channels": config.channels,
         "start_hotkey": config.start_hotkey,
         "stop_hotkey": config.stop_hotkey,
+        "auto_stop_enabled": config.auto_stop_enabled,
         "min_seconds": config.min_seconds,
         "auto_stop_silence_seconds": config.auto_stop_silence_seconds,
         "silence_threshold": config.silence_threshold,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 import time
+from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -49,6 +50,9 @@ class MicrophoneRecorder:
         self._has_voice = False
         self._last_voice_time: float | None = None
         self._last_peak = 0.0
+        self._noise_floor = 0.0
+        self._level_window: deque[float] = deque(maxlen=240)
+        self._noise_recalc_counter = 0
 
     def _resolve_input_device(self) -> int | None:
         target = self.input_device.strip()
@@ -115,13 +119,42 @@ class MicrophoneRecorder:
                     level = 0.0
 
                 self._last_peak = level
-                threshold = self._silence_threshold
-                if self._has_voice:
-                    threshold *= 0.60
+                self._update_noise_floor(level)
+
+                activation = self._activation_threshold()
+                hold = self._hold_threshold()
+                threshold = hold if self._has_voice else activation
 
                 if level >= threshold:
                     self._has_voice = True
                     self._last_voice_time = time.monotonic()
+
+    def _update_noise_floor(self, level: float) -> None:
+        self._level_window.append(level)
+        self._noise_recalc_counter += 1
+
+        if self._noise_floor <= 0.0:
+            self._noise_floor = level
+
+        if self._noise_recalc_counter < 8 and self._noise_floor > 0.0:
+            return
+
+        self._noise_recalc_counter = 0
+        if not self._level_window:
+            return
+
+        # Estimate ambient from lower quartile, resilient to speech bursts.
+        window = np.fromiter(self._level_window, dtype=np.float32)
+        ambient = float(np.percentile(window, 25))
+        self._noise_floor = max(0.0, ambient)
+
+    def _activation_threshold(self) -> float:
+        dynamic = self._noise_floor * 2.4 + 0.004
+        return max(self._silence_threshold, dynamic)
+
+    def _hold_threshold(self) -> float:
+        dynamic = self._noise_floor * 1.7 + 0.002
+        return max(self._silence_threshold * 0.6, dynamic)
 
     def start(self) -> None:
         if self._stream is not None:
@@ -150,6 +183,9 @@ class MicrophoneRecorder:
             self._has_voice = False
             self._last_voice_time = None
             self._last_peak = 0.0
+            self._noise_floor = 0.0
+            self._level_window.clear()
+            self._noise_recalc_counter = 0
             self._recording = True
 
     def capture_activity(self) -> tuple[bool, float | None, float]:

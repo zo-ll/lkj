@@ -211,6 +211,9 @@ class PushToTalkApp:
                 self._busy = False
 
     def _check_auto_stop(self) -> None:
+        if not self.config.auto_stop_enabled:
+            return
+
         with self._lock:
             if self._busy or not self._is_recording:
                 return
@@ -304,12 +307,22 @@ class PushToTalkApp:
                 print(f"ASR preload failed: {exc}")
 
         if self._stop_hotkey is None:
+            mode = (
+                "auto-stop enabled"
+                if self.config.auto_stop_enabled
+                else "manual stop mode"
+            )
             print(
-                f"Ready. Press {self.config.start_hotkey} to start/stop recording. Ctrl+C to exit."
+                f"Ready ({mode}). Press {self.config.start_hotkey} to start/stop recording. Ctrl+C to exit."
             )
         else:
+            mode = (
+                "auto-stop enabled"
+                if self.config.auto_stop_enabled
+                else "manual stop mode"
+            )
             print(
-                f"Ready. Start: {self.config.start_hotkey}, stop: {self.config.stop_hotkey}. Ctrl+C to exit."
+                f"Ready ({mode}). Start: {self.config.start_hotkey}, stop: {self.config.stop_hotkey}. Ctrl+C to exit."
             )
 
         bindings: dict[str, object] = {self._start_hotkey: self._on_start_hotkey}

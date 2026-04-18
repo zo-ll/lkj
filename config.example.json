@@ -9,6 +9,7 @@
   "channels": 1,
   "start_hotkey": "alt+space",
   "stop_hotkey": "",
+  "auto_stop_enabled": false,
   "min_seconds": 0.2,
   "auto_stop_silence_seconds": 1.8,
   "silence_threshold": 0.003,

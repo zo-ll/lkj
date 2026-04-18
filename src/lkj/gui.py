@@ -39,6 +39,7 @@ class SettingsWindow:
         self._channels_var = tk.StringVar(value=str(self.config.channels))
         self._start_hotkey_var = tk.StringVar(value=self.config.start_hotkey)
         self._stop_hotkey_var = tk.StringVar(value=self.config.stop_hotkey)
+        self._auto_stop_enabled_var = tk.BooleanVar(value=self.config.auto_stop_enabled)
         self._min_seconds_var = tk.StringVar(value=str(self.config.min_seconds))
         self._auto_stop_silence_var = tk.StringVar(
             value=str(self.config.auto_stop_silence_seconds)
@@ -68,32 +69,40 @@ class SettingsWindow:
         self._add_entry(frame, 7, "Min seconds", self._min_seconds_var)
         self._add_entry(frame, 8, "Auto-stop silence", self._auto_stop_silence_var)
         self._add_entry(frame, 9, "Silence threshold", self._silence_threshold_var)
-        self._add_entry(frame, 10, "Unload model idle", self._unload_model_after_var)
-        self._add_entry(frame, 11, "Daemon poll", self._daemon_poll_var)
-        self._add_entry(frame, 12, "Transcript log", self._transcript_log_var)
+
+        auto_stop_enabled = ttk.Checkbutton(
+            frame,
+            text="Enable auto-stop on silence",
+            variable=self._auto_stop_enabled_var,
+        )
+        auto_stop_enabled.grid(row=10, column=0, columnspan=2, sticky="w", pady=(2, 4))
+
+        self._add_entry(frame, 11, "Unload model idle", self._unload_model_after_var)
+        self._add_entry(frame, 12, "Daemon poll", self._daemon_poll_var)
+        self._add_entry(frame, 13, "Transcript log", self._transcript_log_var)
 
         preload = ttk.Checkbutton(
             frame,
             text="Preload ASR model on startup",
             variable=self._preload_model_var,
         )
-        preload.grid(row=13, column=0, columnspan=2, sticky="w", pady=(6, 4))
+        preload.grid(row=14, column=0, columnspan=2, sticky="w", pady=(6, 4))
 
         offline = ttk.Checkbutton(
             frame,
             text="Offline only",
             variable=self._offline_only_var,
         )
-        offline.grid(row=14, column=0, columnspan=2, sticky="w", pady=(2, 4))
+        offline.grid(row=15, column=0, columnspan=2, sticky="w", pady=(2, 4))
 
         note = ttk.Label(
             frame,
             text="If daemon is installed, Save automatically restarts it.",
         )
-        note.grid(row=15, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        note.grid(row=16, column=0, columnspan=2, sticky="w", pady=(0, 8))
 
         button_row = ttk.Frame(frame)
-        button_row.grid(row=16, column=0, columnspan=2, sticky="e")
+        button_row.grid(row=17, column=0, columnspan=2, sticky="e")
 
         save_button = ttk.Button(button_row, text="Save", command=self._save)
         save_button.grid(row=0, column=0, padx=(0, 6))
@@ -102,7 +111,7 @@ class SettingsWindow:
         close_button.grid(row=0, column=1)
 
         status = ttk.Label(frame, textvariable=self._status_var)
-        status.grid(row=17, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        status.grid(row=18, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
     def _add_entry(
         self,
@@ -236,6 +245,7 @@ class SettingsWindow:
             channels=channels,
             start_hotkey=start_hotkey,
             stop_hotkey=self._stop_hotkey_var.get().strip(),
+            auto_stop_enabled=bool(self._auto_stop_enabled_var.get()),
             min_seconds=min_seconds,
             auto_stop_silence_seconds=auto_stop_silence_seconds,
             silence_threshold=silence_threshold,

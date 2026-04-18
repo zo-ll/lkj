@@ -7,7 +7,7 @@ Local-first hotkey voice-to-text app using NVIDIA Parakeet.
 - One-command install script for desktop setup.
 - GUI settings app (launch from `lkj` or app launcher/rofi).
 - Background hotkey daemon (no terminal needed for daily use).
-- Auto-stop on silence, plus optional separate stop hotkey.
+- Manual stop by default, with optional auto-stop on silence.
 - Desktop notifications when recording starts and stops.
 - Clipboard auto-copy and local transcript log.
 
@@ -40,7 +40,8 @@ What install does:
 - In settings, choose `Input device` from the dropdown list (or type a custom value).
 - Recording does not start when opening settings.
 - Press `start_hotkey` to begin recording.
-- Recording stops automatically after trailing silence (with a max-length safety stop).
+- By default, press `start_hotkey` again to stop manually.
+- Optionally enable auto-stop in settings to stop on trailing silence.
 - If `stop_hotkey` is set, press it to stop immediately.
 - Notifications show when recording starts and stops.
 - For lower idle power, keep `preload_model=false` and tune `unload_model_after_seconds`.
@@ -61,6 +62,7 @@ Fields:
 - `channels`: default `1`
 - `start_hotkey`: default `alt+space`
 - `stop_hotkey`: optional separate stop key, default empty
+- `auto_stop_enabled`: `false` by default (manual stop mode)
 - `min_seconds`: minimum speech duration before inference
 - `auto_stop_silence_seconds`: trailing silence before auto-stop
 - `silence_threshold`: amplitude threshold used for silence detection
