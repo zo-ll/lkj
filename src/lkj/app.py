@@ -152,16 +152,21 @@ class PushToTalkApp:
             send_notification("LKJ", "Audio too short, try again")
             return
 
-        with tempfile.NamedTemporaryFile(
-            prefix="lkj_", suffix=".wav", delete=False
-        ) as handle:
-            path = Path(handle.name)
-
         try:
-            write_wav(path, audio, self.config.sample_rate)
-            self._process_audio(path)
+            with tempfile.NamedTemporaryFile(
+                prefix="lkj_", suffix=".wav", delete=False
+            ) as handle:
+                path = Path(handle.name)
+
+            try:
+                write_wav(path, audio, self.config.sample_rate)
+                self._process_audio(path)
+            finally:
+                path.unlink(missing_ok=True)
+        except Exception as exc:
+            print(f"Transcription failed: {exc}")
+            send_notification("LKJ", "Transcription failed")
         finally:
-            path.unlink(missing_ok=True)
             with self._lock:
                 self._busy = False
 

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import inspect
 import os
 from pathlib import Path
 from typing import Any
 
 
 class ParakeetTranscriber:
-    def __init__(self, model_name: str, device: str = "cuda", offline_only: bool = True) -> None:
+    def __init__(
+        self, model_name: str, device: str = "cuda", offline_only: bool = True
+    ) -> None:
         self.model_name = model_name
         self.device = device
         self.offline_only = offline_only
@@ -57,5 +60,17 @@ class ParakeetTranscriber:
         self.load()
         assert self._model is not None
 
-        output = self._model.transcribe(paths2audio_files=[str(path)], batch_size=1, verbose=False)
+        transcribe_fn = self._model.transcribe
+        params = inspect.signature(transcribe_fn).parameters
+
+        kwargs: dict[str, object] = {
+            "batch_size": 1,
+            "verbose": False,
+        }
+        if "audio" in params:
+            kwargs["audio"] = [str(path)]
+        else:
+            kwargs["paths2audio_files"] = [str(path)]
+
+        output = transcribe_fn(**kwargs)
         return self._normalize_output(output)
