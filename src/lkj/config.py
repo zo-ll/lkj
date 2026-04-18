@@ -15,7 +15,7 @@ class AppConfig:
     device: str = "cuda"
     input_device: str = ""
     preload_model: bool = True
-    unload_model_after_seconds: float = 0.0
+    unload_model_after_seconds: float = 60.0
     daemon_poll_seconds: float = 0.20
     sample_rate: int = 16000
     channels: int = 1
