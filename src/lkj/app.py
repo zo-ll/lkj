@@ -34,6 +34,7 @@ HOTKEY_TOKEN_MAP = {
 NO_VOICE_AUTO_STOP_MIN_SECONDS = 6.0
 AUTO_STOP_ACTIVITY_MIN_THRESHOLD = 0.004
 MAX_RECORDING_SECONDS = 120.0
+MIN_DAEMON_POLL_SECONDS = 0.05
 LOW_AUDIO_PEAK = 0.08
 TARGET_AUDIO_PEAK = 0.25
 MAX_AUTO_GAIN = 30.0
@@ -94,6 +95,11 @@ class PushToTalkApp:
         self._busy = False
         self._lock = threading.Lock()
         self._recording_started_at: float | None = None
+        self._last_model_use_at: float | None = None
+
+    def _mark_model_use(self) -> None:
+        with self._lock:
+            self._last_model_use_at = time.monotonic()
 
     def _publish_transcript(self, text: str) -> None:
         copied = copy_to_clipboard(text)
@@ -122,7 +128,9 @@ class PushToTalkApp:
 
             try:
                 write_wav(path, candidate, self.config.sample_rate)
+                self._mark_model_use()
                 text = self.transcriber.transcribe_file(path)
+                self._mark_model_use()
             finally:
                 path.unlink(missing_ok=True)
 
@@ -231,6 +239,32 @@ class PushToTalkApp:
         if now - started_at >= no_voice_timeout:
             self._stop_capture(reason="silence")
 
+    def _check_model_idle_unload(self) -> None:
+        timeout = self.config.unload_model_after_seconds
+        if timeout <= 0:
+            return
+
+        with self._lock:
+            if self._busy or self._is_recording:
+                return
+            last_use = self._last_model_use_at
+
+        if last_use is None:
+            return
+
+        if time.monotonic() - last_use < timeout:
+            return
+
+        if not self.transcriber.is_loaded():
+            with self._lock:
+                self._last_model_use_at = None
+            return
+
+        self.transcriber.unload()
+        with self._lock:
+            self._last_model_use_at = None
+        print("ASR model unloaded after idle")
+
     def _on_start_hotkey(self) -> None:
         try:
             with self._lock:
@@ -260,12 +294,14 @@ class PushToTalkApp:
     def run(self) -> None:
         self.recorder.start()
 
-        print("Loading ASR model...")
-        try:
-            self.transcriber.load()
-            print("ASR model ready")
-        except Exception as exc:
-            print(f"ASR preload failed: {exc}")
+        if self.config.preload_model:
+            print("Loading ASR model...")
+            try:
+                self.transcriber.load()
+                self._mark_model_use()
+                print("ASR model ready")
+            except Exception as exc:
+                print(f"ASR preload failed: {exc}")
 
         if self._stop_hotkey is None:
             print(
@@ -286,7 +322,10 @@ class PushToTalkApp:
         try:
             while True:
                 self._check_auto_stop()
-                time.sleep(0.1)
+                self._check_model_idle_unload()
+                time.sleep(
+                    max(MIN_DAEMON_POLL_SECONDS, self.config.daemon_poll_seconds)
+                )
         except KeyboardInterrupt:
             print("Stopping")
         finally:

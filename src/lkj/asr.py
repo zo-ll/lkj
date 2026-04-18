@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import os
 import threading
+import gc
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +42,26 @@ class ParakeetTranscriber:
                 map_location=torch.device(target_device),
             )
             self._model.eval()
+
+    def is_loaded(self) -> bool:
+        with self._load_lock:
+            return self._model is not None
+
+    def unload(self) -> None:
+        with self._load_lock:
+            if self._model is None:
+                return
+            self._model = None
+
+        gc.collect()
+
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            return
 
     def _normalize_output(self, raw: Any) -> str:
         if raw is None:

@@ -14,6 +14,9 @@ class AppConfig:
     model_name: str = "nvidia/parakeet-tdt-0.6b-v2"
     device: str = "cuda"
     input_device: str = ""
+    preload_model: bool = False
+    unload_model_after_seconds: float = 90.0
+    daemon_poll_seconds: float = 0.20
     sample_rate: int = 16000
     channels: int = 1
     start_hotkey: str = "alt+space"
@@ -34,6 +37,12 @@ def _from_dict(data: dict[str, object]) -> AppConfig:
         config.device = str(data["device"])
     if "input_device" in data:
         config.input_device = str(data["input_device"])
+    if "preload_model" in data:
+        config.preload_model = bool(data["preload_model"])
+    if "unload_model_after_seconds" in data:
+        config.unload_model_after_seconds = float(data["unload_model_after_seconds"])
+    if "daemon_poll_seconds" in data:
+        config.daemon_poll_seconds = float(data["daemon_poll_seconds"])
     if "sample_rate" in data:
         config.sample_rate = int(data["sample_rate"])
     if "channels" in data:
@@ -105,6 +114,9 @@ def save_config(config: AppConfig, config_path: Path | None = None) -> Path:
         "model_name": config.model_name,
         "device": config.device,
         "input_device": config.input_device,
+        "preload_model": config.preload_model,
+        "unload_model_after_seconds": config.unload_model_after_seconds,
+        "daemon_poll_seconds": config.daemon_poll_seconds,
         "sample_rate": config.sample_rate,
         "channels": config.channels,
         "start_hotkey": config.start_hotkey,

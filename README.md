@@ -43,7 +43,7 @@ What install does:
 - Recording stops automatically after trailing silence (with a max-length safety stop).
 - If `stop_hotkey` is set, press it to stop immediately.
 - Notifications show when recording starts and stops.
-- Daemon preloads the ASR model on startup, so the first copy after startup is fast.
+- For lower idle power, keep `preload_model=false` and tune `unload_model_after_seconds`.
 
 ## Configuration
 
@@ -54,6 +54,9 @@ Fields:
 - `model_name`: default `nvidia/parakeet-tdt-0.6b-v2`
 - `device`: `cuda` or `cpu`
 - `input_device`: optional sounddevice input (e.g. `pulse`, `default`, or device name)
+- `preload_model`: load ASR model at daemon startup (faster first copy, higher idle usage)
+- `unload_model_after_seconds`: unload model after idle seconds (`0` disables unload)
+- `daemon_poll_seconds`: daemon loop interval (`0.2` default)
 - `sample_rate`: default `16000`
 - `channels`: default `1`
 - `start_hotkey`: default `alt+space`
@@ -81,6 +84,8 @@ lkj doctor --warmup
 - No hotkey events on Wayland: run under X11 session or grant input permissions.
 - Hotkey conflict with desktop shortcuts: change `start_hotkey`/`stop_hotkey`.
 - No speech detected repeatedly: set `input_device` to `pulse` in settings and retry.
+- First transcription can be slower in low-power mode: set `preload_model=true` if you prefer startup latency over idle efficiency.
+- Accuracy for non-English speech may be limited with the default Parakeet model.
 - `cuda=False` in doctor output: reinstall CUDA torch wheel.
 - Model load fails in offline mode: run one online warmup (`lkj --online doctor --warmup`).
 
