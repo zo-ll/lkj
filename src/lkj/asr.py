@@ -4,6 +4,8 @@ import inspect
 import os
 import threading
 import gc
+import tempfile
+import wave
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +64,24 @@ class ParakeetTranscriber:
                 torch.cuda.empty_cache()
         except Exception:
             return
+
+    def warmup(self, sample_rate: int = 16000) -> None:
+        frame_count = max(1, int(sample_rate * 0.15))
+        with tempfile.NamedTemporaryFile(
+            prefix="lkj_warmup_", suffix=".wav", delete=False
+        ) as handle:
+            path = Path(handle.name)
+
+        try:
+            with wave.open(str(path), "wb") as stream:
+                stream.setnchannels(1)
+                stream.setsampwidth(2)
+                stream.setframerate(sample_rate)
+                stream.writeframes(b"\x00\x00" * frame_count)
+
+            self.transcribe_file(path)
+        finally:
+            path.unlink(missing_ok=True)
 
     def _normalize_output(self, raw: Any) -> str:
         if raw is None:

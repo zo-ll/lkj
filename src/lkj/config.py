@@ -14,8 +14,8 @@ class AppConfig:
     model_name: str = "nvidia/parakeet-tdt-0.6b-v2"
     device: str = "cuda"
     input_device: str = ""
-    preload_model: bool = False
-    unload_model_after_seconds: float = 90.0
+    preload_model: bool = True
+    unload_model_after_seconds: float = 0.0
     daemon_poll_seconds: float = 0.20
     sample_rate: int = 16000
     channels: int = 1

@@ -115,6 +115,7 @@ class PushToTalkApp:
     def _warm_model_in_background(self) -> None:
         try:
             self.transcriber.load()
+            self.transcriber.warmup(sample_rate=self.config.sample_rate)
             self._mark_model_use()
         except Exception as exc:
             print(f"ASR warmup failed: {exc}")
@@ -332,6 +333,8 @@ class PushToTalkApp:
             print("Loading ASR model...")
             try:
                 self.transcriber.load()
+                print("Warming ASR runtime...")
+                self.transcriber.warmup(sample_rate=self.config.sample_rate)
                 self._mark_model_use()
                 print("ASR model ready")
             except Exception as exc:

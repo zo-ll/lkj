@@ -44,8 +44,8 @@ What install does:
 - Optionally enable auto-stop in settings to stop on trailing silence.
 - If `stop_hotkey` is set, press it to stop immediately.
 - Notifications show when recording starts and stops.
-- For lower idle power, keep `preload_model=false` and tune `unload_model_after_seconds`.
-- Even with `preload_model=false`, LKJ starts warming the model when recording begins to reduce first-copy delay.
+- Default mode prioritizes responsiveness: model preloads on startup and stays loaded.
+- To reduce idle power later, disable preload and set a non-zero idle unload timeout.
 
 ## Configuration
 
@@ -56,8 +56,8 @@ Fields:
 - `model_name`: default `nvidia/parakeet-tdt-0.6b-v2`
 - `device`: `cuda` or `cpu`
 - `input_device`: optional sounddevice input (e.g. `pulse`, `default`, or device name)
-- `preload_model`: load ASR model at daemon startup (faster first copy, higher idle usage)
-- `unload_model_after_seconds`: unload model after idle seconds (`0` disables unload)
+- `preload_model`: load and warm model at daemon startup (`true` by default)
+- `unload_model_after_seconds`: unload model after idle seconds (`0` disables unload, default)
 - `daemon_poll_seconds`: daemon loop interval (`0.2` default)
 - `sample_rate`: default `16000`
 - `channels`: default `1`
@@ -87,7 +87,7 @@ lkj doctor --warmup
 - No hotkey events on Wayland: run under X11 session or grant input permissions.
 - Hotkey conflict with desktop shortcuts: change `start_hotkey`/`stop_hotkey`.
 - No speech detected repeatedly: set `input_device` to `pulse` in settings and retry.
-- First transcription can be slower in low-power mode: set `preload_model=true` if you prefer startup latency over idle efficiency.
+- If idle power is too high, set `preload_model=false` and use a non-zero `unload_model_after_seconds`.
 - Accuracy for non-English speech may be limited with the default Parakeet model.
 - `cuda=False` in doctor output: reinstall CUDA torch wheel.
 - Model load fails in offline mode: run one online warmup (`lkj --online doctor --warmup`).
