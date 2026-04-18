@@ -110,12 +110,16 @@ class MicrophoneRecorder:
                 self._frames.append(frame)
 
                 if frame.size > 0:
-                    peak = float(np.max(np.abs(frame)))
+                    level = float(np.sqrt(np.mean(np.square(frame, dtype=np.float32))))
                 else:
-                    peak = 0.0
+                    level = 0.0
 
-                self._last_peak = peak
-                if peak >= self._silence_threshold:
+                self._last_peak = level
+                threshold = self._silence_threshold
+                if self._has_voice:
+                    threshold *= 0.60
+
+                if level >= threshold:
                     self._has_voice = True
                     self._last_voice_time = time.monotonic()
 

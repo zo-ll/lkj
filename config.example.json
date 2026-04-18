@@ -7,7 +7,7 @@
   "start_hotkey": "alt+space",
   "stop_hotkey": "",
   "min_seconds": 0.2,
-  "auto_stop_silence_seconds": 1.2,
+  "auto_stop_silence_seconds": 1.8,
   "silence_threshold": 0.003,
   "offline_only": true,
   "transcript_log_path": "~/.local/share/lkj/transcripts.log"
