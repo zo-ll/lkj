@@ -18,8 +18,8 @@ class AppConfig:
     start_hotkey: str = "alt+space"
     stop_hotkey: str = ""
     min_seconds: float = 0.20
-    auto_stop_silence_seconds: float = 1.0
-    silence_threshold: float = 0.01
+    auto_stop_silence_seconds: float = 1.2
+    silence_threshold: float = 0.005
     offline_only: bool = True
     transcript_log_path: Path = DEFAULT_LOG_PATH
 

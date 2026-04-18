@@ -87,11 +87,17 @@ class PushToTalkApp:
         text = self.transcriber.transcribe_file(audio_path)
         if not text:
             print("No speech detected")
+            send_notification("LKJ", "No speech detected")
             return
 
-        copy_to_clipboard(text)
+        copied = copy_to_clipboard(text)
         append_transcript(self.config.transcript_log_path, text)
-        print(f"Transcript copied: {text}")
+        if copied:
+            print("Transcript copied to clipboard")
+            send_notification("LKJ", "Transcription copied")
+        else:
+            print("Transcription ready, but clipboard copy failed")
+            send_notification("LKJ", "Transcription ready (clipboard unavailable)")
 
     def _start_capture(self) -> None:
         with self._lock:
@@ -121,13 +127,14 @@ class PushToTalkApp:
         send_notification("LKJ", "Recording stopped")
 
         audio = self.recorder.end_capture()
-        audio = trim_silence(audio)
+        audio = trim_silence(audio, threshold=self.config.silence_threshold)
 
         duration = len(audio) / float(self.config.sample_rate)
         if duration < self.config.min_seconds:
             with self._lock:
                 self._busy = False
             print("Audio too short")
+            send_notification("LKJ", "Audio too short, try again")
             return
 
         with tempfile.NamedTemporaryFile(
@@ -230,10 +237,11 @@ def transcribe_once(config: AppConfig, seconds: float) -> None:
 
     print(f"Recording {seconds:.1f}s...")
     audio = recorder.record_blocking(seconds=seconds)
-    audio = trim_silence(audio)
+    audio = trim_silence(audio, threshold=config.silence_threshold)
 
     if len(audio) / float(config.sample_rate) < config.min_seconds:
         print("Audio too short")
+        send_notification("LKJ", "Audio too short, try again")
         return
 
     with tempfile.NamedTemporaryFile(
@@ -249,8 +257,14 @@ def transcribe_once(config: AppConfig, seconds: float) -> None:
 
     if not text:
         print("No speech detected")
+        send_notification("LKJ", "No speech detected")
         return
 
-    copy_to_clipboard(text)
+    copied = copy_to_clipboard(text)
     append_transcript(config.transcript_log_path, text)
-    print(f"Transcript copied: {text}")
+    if copied:
+        print("Transcript copied to clipboard")
+        send_notification("LKJ", "Transcription copied")
+    else:
+        print("Transcription ready, but clipboard copy failed")
+        send_notification("LKJ", "Transcription ready (clipboard unavailable)")
