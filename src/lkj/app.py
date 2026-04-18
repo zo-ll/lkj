@@ -12,43 +12,67 @@ from .config import AppConfig
 from .output import append_transcript, copy_to_clipboard
 
 
-def _resolve_push_key(push_key: str) -> keyboard.Key | keyboard.KeyCode:
-    key_name = push_key.strip().lower()
+HOTKEY_TOKEN_MAP = {
+    "alt": "<alt>",
+    "ctrl": "<ctrl>",
+    "control": "<ctrl>",
+    "shift": "<shift>",
+    "cmd": "<cmd>",
+    "super": "<cmd>",
+    "space": "<space>",
+    "enter": "<enter>",
+    "return": "<enter>",
+    "esc": "<esc>",
+    "escape": "<esc>",
+    "tab": "<tab>",
+}
 
-    if len(key_name) == 1:
-        return keyboard.KeyCode.from_char(key_name)
 
-    match = getattr(keyboard.Key, key_name, None)
-    if match is None:
-        raise ValueError(f"Unsupported key: {push_key}")
+def _normalize_hotkey(push_key: str) -> str:
+    parsed: list[str] = []
+    for token in push_key.strip().lower().split("+"):
+        token = token.strip()
+        if not token:
+            continue
 
-    return match
+        if token in HOTKEY_TOKEN_MAP:
+            parsed.append(HOTKEY_TOKEN_MAP[token])
+            continue
 
+        if token.startswith("<") and token.endswith(">"):
+            parsed.append(token)
+            continue
 
-def _key_matches(
-    candidate: keyboard.Key | keyboard.KeyCode,
-    expected: keyboard.Key | keyboard.KeyCode,
-) -> bool:
-    if isinstance(expected, keyboard.KeyCode):
-        if not isinstance(candidate, keyboard.KeyCode):
-            return False
-        return candidate.char == expected.char
+        if token.startswith("f") and token[1:].isdigit():
+            parsed.append(f"<{token}>")
+            continue
 
-    return candidate == expected
+        if len(token) == 1:
+            parsed.append(token)
+            continue
+
+        raise ValueError(f"Unsupported hotkey token: {token}")
+
+    if not parsed:
+        raise ValueError("Hotkey is empty")
+
+    return "+".join(parsed)
 
 
 class PushToTalkApp:
     def __init__(self, config: AppConfig) -> None:
         self.config = config
-        self.recorder = MicrophoneRecorder(sample_rate=config.sample_rate, channels=config.channels)
+        self.recorder = MicrophoneRecorder(
+            sample_rate=config.sample_rate, channels=config.channels
+        )
         self.transcriber = ParakeetTranscriber(
             model_name=config.model_name,
             device=config.device,
             offline_only=config.offline_only,
         )
 
-        self._expected_key = _resolve_push_key(config.push_key)
-        self._is_pressed = False
+        self._hotkey = _normalize_hotkey(config.push_key)
+        self._is_recording = False
         self._busy = False
 
     def _process_audio(self, audio_path: Path) -> None:
@@ -61,29 +85,20 @@ class PushToTalkApp:
         append_transcript(self.config.transcript_log_path, text)
         print(f"Transcript copied: {text}")
 
-    def _on_press(self, key: keyboard.Key | keyboard.KeyCode) -> None:
+    def _toggle_capture(self) -> None:
         if self._busy:
+            print("Busy transcribing, wait")
             return
 
-        if self._is_pressed:
+        if not self._is_recording:
+            self.recorder.begin_capture()
+            self._is_recording = True
+            print("Recording started")
             return
 
-        if not _key_matches(key, self._expected_key):
-            return
-
-        self._is_pressed = True
-        self.recorder.begin_capture()
-        print("Recording...")
-
-    def _on_release(self, key: keyboard.Key | keyboard.KeyCode) -> None:
-        if not self._is_pressed:
-            return
-
-        if not _key_matches(key, self._expected_key):
-            return
-
-        self._is_pressed = False
+        self._is_recording = False
         self._busy = True
+        print("Recording stopped. Transcribing...")
 
         audio = self.recorder.end_capture()
         audio = trim_silence(audio)
@@ -94,7 +109,9 @@ class PushToTalkApp:
             print("Audio too short")
             return
 
-        with tempfile.NamedTemporaryFile(prefix="lkj_", suffix=".wav", delete=False) as handle:
+        with tempfile.NamedTemporaryFile(
+            prefix="lkj_", suffix=".wav", delete=False
+        ) as handle:
             path = Path(handle.name)
 
         try:
@@ -104,14 +121,22 @@ class PushToTalkApp:
             path.unlink(missing_ok=True)
             self._busy = False
 
+    def _on_hotkey(self) -> None:
+        try:
+            self._toggle_capture()
+        except Exception as exc:
+            self._is_recording = False
+            self._busy = False
+            print(f"Hotkey handler error: {exc}")
+
     def run(self) -> None:
         print(f"Loading model: {self.config.model_name}")
         self.transcriber.load()
 
         self.recorder.start()
-        print(f"Hold {self.config.push_key} to talk. Ctrl+C to exit.")
+        print(f"Press {self.config.push_key} to start/stop recording. Ctrl+C to exit.")
 
-        listener = keyboard.Listener(on_press=self._on_press, on_release=self._on_release)
+        listener = keyboard.GlobalHotKeys({self._hotkey: self._on_hotkey})
         listener.start()
 
         try:
@@ -120,12 +145,17 @@ class PushToTalkApp:
         except KeyboardInterrupt:
             print("Stopping")
         finally:
+            if self._is_recording:
+                self.recorder.end_capture()
+                self._is_recording = False
             listener.stop()
             self.recorder.close()
 
 
 def transcribe_once(config: AppConfig, seconds: float) -> None:
-    recorder = MicrophoneRecorder(sample_rate=config.sample_rate, channels=config.channels)
+    recorder = MicrophoneRecorder(
+        sample_rate=config.sample_rate, channels=config.channels
+    )
     transcriber = ParakeetTranscriber(
         model_name=config.model_name,
         device=config.device,
@@ -140,7 +170,9 @@ def transcribe_once(config: AppConfig, seconds: float) -> None:
         print("Audio too short")
         return
 
-    with tempfile.NamedTemporaryFile(prefix="lkj_once_", suffix=".wav", delete=False) as handle:
+    with tempfile.NamedTemporaryFile(
+        prefix="lkj_once_", suffix=".wav", delete=False
+    ) as handle:
         path = Path(handle.name)
 
     try:

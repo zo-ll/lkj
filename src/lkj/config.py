@@ -15,7 +15,7 @@ class AppConfig:
     device: str = "cuda"
     sample_rate: int = 16000
     channels: int = 1
-    push_key: str = "f8"
+    push_key: str = "alt+space"
     min_seconds: float = 0.20
     offline_only: bool = True
     transcript_log_path: Path = DEFAULT_LOG_PATH

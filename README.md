@@ -5,7 +5,7 @@ Local-only push-to-talk voice-to-text app using NVIDIA Parakeet.
 ## Features
 
 - Local transcription only after first model cache.
-- Push-to-talk flow with clipboard auto-copy.
+- Hotkey toggle flow with clipboard auto-copy.
 - Transcript log saved locally.
 - Doctor command for setup checks.
 
@@ -42,7 +42,7 @@ Daily run (offline by default):
 lkj run
 ```
 
-Default key: hold `f8` to record, release to transcribe.
+Default key: press `alt+space` once to start recording, press again to transcribe.
 
 ## Configuration
 
@@ -53,14 +53,14 @@ Fields:
 - `model_name`: default `nvidia/parakeet-tdt-0.6b-v2`
 - `device`: `cuda` or `cpu`
 - `sample_rate`: default `16000`
-- `push_key`: default `f8`
+- `push_key`: default `alt+space`
 - `min_seconds`: minimum speech duration before inference
 - `offline_only`: `true` for no network model fetch
 - `transcript_log_path`: local transcript log path
 
 ## Commands
 
-- `lkj run` - push-to-talk mode.
+- `lkj run` - hotkey toggle mode.
 - `lkj once --seconds 5` - one-shot record + transcribe.
 - `lkj doctor` - environment checks.
 - `lkj doctor --warmup` - checks + model load test.
@@ -68,6 +68,7 @@ Fields:
 ## Troubleshooting
 
 - No hotkey events on Wayland: run under X11 session or grant input permissions.
+- `alt+space` conflict with desktop shortcut: set different `push_key` in config.
 - `cuda=False` in doctor output: reinstall CUDA torch wheel.
 - Model load fails in offline mode: run one online warmup (`--online`).
 
