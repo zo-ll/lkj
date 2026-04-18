@@ -177,6 +177,15 @@ class PushToTalkApp:
             if self._is_recording:
                 return
 
+        # Wait for model preload to complete if it's still loading
+        # This ensures first transcription after daemon start is fast
+        if self._warmup_thread is not None and self._warmup_thread.is_alive():
+            print("Waiting for ASR model to be ready...")
+            self._warmup_thread.join(timeout=30.0)
+            if self._warmup_thread.is_alive():
+                print("ASR model load timed out, proceeding anyway")
+
+        with self._lock:
             self.recorder.begin_capture(
                 silence_threshold=max(
                     self.config.silence_threshold,
@@ -186,7 +195,6 @@ class PushToTalkApp:
             self._is_recording = True
             self._recording_started_at = time.monotonic()
 
-        self._maybe_start_background_warmup()
         print("Recording started")
         send_notification("LKJ", "Recording started")
 
