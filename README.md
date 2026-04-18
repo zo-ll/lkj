@@ -45,6 +45,7 @@ What install does:
 - If `stop_hotkey` is set, press it to stop immediately.
 - Notifications show when recording starts and stops.
 - For lower idle power, keep `preload_model=false` and tune `unload_model_after_seconds`.
+- Even with `preload_model=false`, LKJ starts warming the model when recording begins to reduce first-copy delay.
 
 ## Configuration
 

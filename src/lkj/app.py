@@ -96,6 +96,7 @@ class PushToTalkApp:
         self._lock = threading.Lock()
         self._recording_started_at: float | None = None
         self._last_model_use_at: float | None = None
+        self._warmup_thread: threading.Thread | None = None
 
     def _mark_model_use(self) -> None:
         with self._lock:
@@ -110,6 +111,34 @@ class PushToTalkApp:
         else:
             print("Transcription ready, but clipboard copy failed")
             send_notification("LKJ", "Transcription ready (clipboard unavailable)")
+
+    def _warm_model_in_background(self) -> None:
+        try:
+            self.transcriber.load()
+            self._mark_model_use()
+        except Exception as exc:
+            print(f"ASR warmup failed: {exc}")
+        finally:
+            with self._lock:
+                self._warmup_thread = None
+
+    def _maybe_start_background_warmup(self) -> None:
+        if self.config.preload_model:
+            return
+
+        if self.transcriber.is_loaded():
+            self._mark_model_use()
+            return
+
+        with self._lock:
+            if self._warmup_thread is not None and self._warmup_thread.is_alive():
+                return
+
+            self._warmup_thread = threading.Thread(
+                target=self._warm_model_in_background,
+                daemon=True,
+            )
+            self._warmup_thread.start()
 
     def _transcribe_audio(self, audio: np.ndarray) -> str:
         candidates: list[np.ndarray] = [audio.astype(np.float32)]
@@ -155,6 +184,8 @@ class PushToTalkApp:
             )
             self._is_recording = True
             self._recording_started_at = time.monotonic()
+
+        self._maybe_start_background_warmup()
         print("Recording started")
         send_notification("LKJ", "Recording started")
 
