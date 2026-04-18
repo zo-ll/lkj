@@ -92,6 +92,27 @@ lkj doctor --warmup
 - `cuda=False` in doctor output: reinstall CUDA torch wheel.
 - Model load fails in offline mode: run one online warmup (`lkj --online doctor --warmup`).
 
+## Polybar Integration
+
+LKJ includes a polybar module to show daemon status and control it:
+
+**Setup:**
+1. Copy `polybar-module.ini` contents into your polybar `config.ini`
+2. Or include it: `include-file = /path/to/lkj/polybar-module.ini`
+3. Add `lkj` to your polybar `modules-right` or `modules-left`
+
+**What it does:**
+- Shows  (microphone icon) when daemon is running
+- Shows  (muted icon) when daemon is stopped  
+- Click the icon to stop the daemon
+- Updates every 2 seconds
+
+**Manual install:**
+```bash
+cp /home/az/projects/lkj/polybar-module.ini ~/.config/polybar/lkj.ini
+# Add to your polybar config: include-file = ~/.config/polybar/lkj.ini
+```
+
 ## Status
 
 - [x] Repo scaffold

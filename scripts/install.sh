@@ -99,5 +99,11 @@ EOF
   echo "Daemon added to desktop autostart"
 fi
 
+# Install polybar helper script
+cp "$PROJECT_DIR/scripts/lkj-polybar.sh" "$HOME/.local/bin/lkj-polybar"
+chmod +x "$HOME/.local/bin/lkj-polybar"
+echo "Polybar helper installed to ~/.local/bin/lkj-polybar"
+
 echo "Install complete"
 echo "Open LKJ from app launcher/rofi (entry name: LKJ)"
+echo "For polybar: cp polybar-module.ini ~/.config/polybar/ and add 'lkj' to your modules"
