@@ -1,0 +1,214 @@
+from __future__ import annotations
+
+import shutil
+import subprocess
+import tkinter as tk
+from dataclasses import replace
+from pathlib import Path
+from tkinter import messagebox, ttk
+
+from .config import DEFAULT_CONFIG_PATH, load_config, save_config
+
+
+class SettingsWindow:
+    def __init__(self, config_path: Path | None = None) -> None:
+        self.config_path = config_path or DEFAULT_CONFIG_PATH
+        self.config = load_config(config_path=self.config_path)
+
+        self.root = tk.Tk()
+        self.root.title("LKJ Settings")
+        self.root.resizable(False, False)
+
+        self._status_var = tk.StringVar(value=f"Config file: {self.config_path}")
+
+        self._model_name_var = tk.StringVar(value=self.config.model_name)
+        self._device_var = tk.StringVar(value=self.config.device)
+        self._sample_rate_var = tk.StringVar(value=str(self.config.sample_rate))
+        self._channels_var = tk.StringVar(value=str(self.config.channels))
+        self._start_hotkey_var = tk.StringVar(value=self.config.start_hotkey)
+        self._stop_hotkey_var = tk.StringVar(value=self.config.stop_hotkey)
+        self._min_seconds_var = tk.StringVar(value=str(self.config.min_seconds))
+        self._auto_stop_silence_var = tk.StringVar(
+            value=str(self.config.auto_stop_silence_seconds)
+        )
+        self._silence_threshold_var = tk.StringVar(
+            value=str(self.config.silence_threshold)
+        )
+        self._offline_only_var = tk.BooleanVar(value=self.config.offline_only)
+        self._transcript_log_var = tk.StringVar(
+            value=str(self.config.transcript_log_path)
+        )
+
+        self._build()
+
+    def _build(self) -> None:
+        frame = ttk.Frame(self.root, padding=14)
+        frame.grid(row=0, column=0, sticky="nsew")
+
+        self._add_entry(frame, 0, "Model", self._model_name_var)
+        self._add_entry(frame, 1, "Device", self._device_var)
+        self._add_entry(frame, 2, "Sample rate", self._sample_rate_var)
+        self._add_entry(frame, 3, "Channels", self._channels_var)
+        self._add_entry(frame, 4, "Start hotkey", self._start_hotkey_var)
+        self._add_entry(frame, 5, "Stop hotkey", self._stop_hotkey_var)
+        self._add_entry(frame, 6, "Min seconds", self._min_seconds_var)
+        self._add_entry(frame, 7, "Auto-stop silence", self._auto_stop_silence_var)
+        self._add_entry(frame, 8, "Silence threshold", self._silence_threshold_var)
+        self._add_entry(frame, 9, "Transcript log", self._transcript_log_var)
+
+        offline = ttk.Checkbutton(
+            frame,
+            text="Offline only",
+            variable=self._offline_only_var,
+        )
+        offline.grid(row=10, column=0, columnspan=2, sticky="w", pady=(6, 4))
+
+        note = ttk.Label(
+            frame,
+            text="If daemon is installed, Save automatically restarts it.",
+        )
+        note.grid(row=11, column=0, columnspan=2, sticky="w", pady=(0, 8))
+
+        button_row = ttk.Frame(frame)
+        button_row.grid(row=12, column=0, columnspan=2, sticky="e")
+
+        save_button = ttk.Button(button_row, text="Save", command=self._save)
+        save_button.grid(row=0, column=0, padx=(0, 6))
+
+        close_button = ttk.Button(button_row, text="Close", command=self.root.destroy)
+        close_button.grid(row=0, column=1)
+
+        status = ttk.Label(frame, textvariable=self._status_var)
+        status.grid(row=13, column=0, columnspan=2, sticky="w", pady=(10, 0))
+
+    def _add_entry(
+        self,
+        frame: ttk.Frame,
+        row: int,
+        label: str,
+        variable: tk.StringVar,
+    ) -> None:
+        widget = ttk.Label(frame, text=label)
+        widget.grid(row=row, column=0, sticky="w", padx=(0, 10), pady=2)
+
+        entry = ttk.Entry(frame, textvariable=variable, width=48)
+        entry.grid(row=row, column=1, sticky="ew", pady=2)
+
+    def _save(self) -> None:
+        try:
+            sample_rate = int(self._sample_rate_var.get().strip())
+            channels = int(self._channels_var.get().strip())
+            min_seconds = float(self._min_seconds_var.get().strip())
+            auto_stop_silence_seconds = float(self._auto_stop_silence_var.get().strip())
+            silence_threshold = float(self._silence_threshold_var.get().strip())
+        except ValueError:
+            messagebox.showerror(
+                "Invalid input", "Numeric fields must contain valid numbers."
+            )
+            return
+
+        start_hotkey = self._start_hotkey_var.get().strip()
+        if not start_hotkey:
+            messagebox.showerror("Invalid input", "Start hotkey cannot be empty.")
+            return
+
+        if sample_rate <= 0 or channels <= 0:
+            messagebox.showerror(
+                "Invalid input", "Sample rate and channels must be > 0."
+            )
+            return
+
+        if min_seconds < 0 or auto_stop_silence_seconds <= 0:
+            messagebox.showerror(
+                "Invalid input",
+                "Min seconds must be >= 0 and auto-stop silence must be > 0.",
+            )
+            return
+
+        if silence_threshold < 0:
+            messagebox.showerror("Invalid input", "Silence threshold must be >= 0.")
+            return
+
+        updated = replace(
+            self.config,
+            model_name=self._model_name_var.get().strip(),
+            device=self._device_var.get().strip(),
+            sample_rate=sample_rate,
+            channels=channels,
+            start_hotkey=start_hotkey,
+            stop_hotkey=self._stop_hotkey_var.get().strip(),
+            min_seconds=min_seconds,
+            auto_stop_silence_seconds=auto_stop_silence_seconds,
+            silence_threshold=silence_threshold,
+            offline_only=bool(self._offline_only_var.get()),
+            transcript_log_path=Path(
+                self._transcript_log_var.get().strip()
+            ).expanduser(),
+        )
+
+        path = save_config(updated, config_path=self.config_path)
+        self.config = updated
+
+        restarted = _restart_daemon_if_installed()
+        if restarted:
+            self._status_var.set(f"Saved to {path}. Daemon restarted.")
+        else:
+            self._status_var.set(f"Saved to {path}.")
+
+    def run(self) -> None:
+        self.root.mainloop()
+
+
+def _restart_daemon_if_installed() -> bool:
+    if shutil.which("systemctl") is not None:
+        try:
+            probe = subprocess.run(
+                ["systemctl", "--user", "cat", "lkj-daemon.service"],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            if probe.returncode == 0:
+                restart = subprocess.run(
+                    ["systemctl", "--user", "restart", "lkj-daemon.service"],
+                    check=False,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return restart.returncode == 0
+        except Exception:
+            return False
+
+    launcher = Path.home() / ".local" / "bin" / "lkj"
+    if not launcher.exists() or shutil.which("pgrep") is None:
+        return False
+
+    pattern = "\\.local/bin/lkj daemon"
+    probe = subprocess.run(
+        ["pgrep", "-f", pattern],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    if probe.returncode != 0:
+        return False
+
+    if shutil.which("pkill") is not None:
+        subprocess.run(
+            ["pkill", "-f", pattern],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    subprocess.Popen(
+        [str(launcher), "daemon"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return True
+
+
+def run_settings_window(config_path: Path | None = None) -> None:
+    window = SettingsWindow(config_path=config_path)
+    window.run()

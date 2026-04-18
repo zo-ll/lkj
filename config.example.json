@@ -3,8 +3,11 @@
   "device": "cuda",
   "sample_rate": 16000,
   "channels": 1,
-  "push_key": "alt+space",
+  "start_hotkey": "alt+space",
+  "stop_hotkey": "",
   "min_seconds": 0.2,
+  "auto_stop_silence_seconds": 1.0,
+  "silence_threshold": 0.01,
   "offline_only": true,
   "transcript_log_path": "~/.local/share/lkj/transcripts.log"
 }

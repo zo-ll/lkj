@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from pathlib import Path
 
 import numpy as np
@@ -38,15 +39,30 @@ class MicrophoneRecorder:
         self._lock = threading.Lock()
         self._recording = False
         self._stream: sd.InputStream | None = None
+        self._silence_threshold = 0.01
+        self._has_voice = False
+        self._last_voice_time: float | None = None
+        self._last_peak = 0.0
 
-    def _callback(self, indata: np.ndarray, frames: int, time, status) -> None:
-        del frames, time
+    def _callback(self, indata: np.ndarray, frames: int, callback_time, status) -> None:
+        del frames, callback_time
         if status:
             return
 
         with self._lock:
             if self._recording:
-                self._frames.append(indata.copy())
+                frame = indata.copy()
+                self._frames.append(frame)
+
+                if frame.size > 0:
+                    peak = float(np.max(np.abs(frame)))
+                else:
+                    peak = 0.0
+
+                self._last_peak = peak
+                if peak >= self._silence_threshold:
+                    self._has_voice = True
+                    self._last_voice_time = time.monotonic()
 
     def start(self) -> None:
         if self._stream is not None:
@@ -68,10 +84,18 @@ class MicrophoneRecorder:
         self._stream.close()
         self._stream = None
 
-    def begin_capture(self) -> None:
+    def begin_capture(self, silence_threshold: float = 0.01) -> None:
         with self._lock:
             self._frames = []
+            self._silence_threshold = max(float(silence_threshold), 0.0)
+            self._has_voice = False
+            self._last_voice_time = None
+            self._last_peak = 0.0
             self._recording = True
+
+    def capture_activity(self) -> tuple[bool, float | None, float]:
+        with self._lock:
+            return self._has_voice, self._last_voice_time, self._last_peak
 
     def end_capture(self) -> np.ndarray:
         with self._lock:

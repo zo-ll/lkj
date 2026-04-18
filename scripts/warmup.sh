@@ -15,4 +15,4 @@ echo "Running doctor"
 echo "Downloading/loading model cache"
 .venv/bin/python -m lkj.cli --online doctor --warmup
 
-echo "Warmup complete. Daily command: .venv/bin/python -m lkj.cli run"
+echo "Warmup complete. Start daemon: .venv/bin/python -m lkj.cli daemon"

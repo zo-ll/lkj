@@ -17,7 +17,11 @@ fi
 
 echo "Creating Python 3.12 virtualenv"
 uv python install 3.12
-uv venv --python 3.12 .venv
+if [[ ! -x .venv/bin/python ]]; then
+  uv venv --python 3.12 .venv
+else
+  echo "Reusing existing virtualenv at .venv"
+fi
 
 echo "Installing runtime dependencies"
 uv pip install --python .venv/bin/python --upgrade pip
@@ -25,4 +29,4 @@ uv pip install --python .venv/bin/python torch torchvision torchaudio --index-ur
 uv pip install --python .venv/bin/python -e .
 
 echo "Bootstrap done"
-echo "Next: source .venv/bin/activate && lkj --online once --seconds 5"
+echo "Next: run ./scripts/install.sh for full desktop install"
