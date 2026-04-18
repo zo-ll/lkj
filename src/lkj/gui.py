@@ -24,7 +24,17 @@ class SettingsWindow:
 
         self._status_var = tk.StringVar(value=f"Config file: {self.config_path}")
 
+        # Available ASR models
+        self._model_options = [
+            "nvidia/parakeet-tdt-0.6b-v2",
+            "nvidia/stt_en_citrinet_512",
+            "nvidia/stt_en_fastconformer_hybrid_large_pc",
+            "nvidia/canary-1b",
+        ]
         self._model_name_var = tk.StringVar(value=self.config.model_name)
+
+        # Device options: cuda or cpu
+        self._device_options = ["cuda", "cpu"]
         self._device_var = tk.StringVar(value=self.config.device)
         self._input_device_options, self._input_device_map = _discover_input_devices()
         self._input_device_var = tk.StringVar(
@@ -59,8 +69,8 @@ class SettingsWindow:
         frame.grid(row=0, column=0, sticky="nsew")
         frame.columnconfigure(1, weight=1)
 
-        self._add_entry(frame, 0, "Model", self._model_name_var)
-        self._add_entry(frame, 1, "Device", self._device_var)
+        self._add_model_selector(frame, 0)
+        self._add_device_selector(frame, 1)
         self._add_input_device_selector(frame, 2)
         self._add_entry(frame, 3, "Sample rate", self._sample_rate_var)
         self._add_entry(frame, 4, "Channels", self._channels_var)
@@ -125,6 +135,31 @@ class SettingsWindow:
 
         entry = ttk.Entry(frame, textvariable=variable, width=48)
         entry.grid(row=row, column=1, sticky="ew", pady=2)
+
+    def _add_model_selector(self, frame: ttk.Frame, row: int) -> None:
+        widget = ttk.Label(frame, text="Model")
+        widget.grid(row=row, column=0, sticky="w", padx=(0, 10), pady=2)
+
+        self._model_combo = ttk.Combobox(
+            frame,
+            textvariable=self._model_name_var,
+            values=self._model_options,
+            width=48,
+        )
+        self._model_combo.grid(row=row, column=1, sticky="ew", pady=2)
+
+    def _add_device_selector(self, frame: ttk.Frame, row: int) -> None:
+        widget = ttk.Label(frame, text="Device")
+        widget.grid(row=row, column=0, sticky="w", padx=(0, 10), pady=2)
+
+        self._device_combo = ttk.Combobox(
+            frame,
+            textvariable=self._device_var,
+            values=self._device_options,
+            width=48,
+            state="readonly",
+        )
+        self._device_combo.grid(row=row, column=1, sticky="ew", pady=2)
 
     def _add_input_device_selector(self, frame: ttk.Frame, row: int) -> None:
         widget = ttk.Label(frame, text="Input device")
