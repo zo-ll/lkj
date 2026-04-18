@@ -19,7 +19,7 @@ class AppConfig:
     stop_hotkey: str = ""
     min_seconds: float = 0.20
     auto_stop_silence_seconds: float = 1.2
-    silence_threshold: float = 0.005
+    silence_threshold: float = 0.003
     offline_only: bool = True
     transcript_log_path: Path = DEFAULT_LOG_PATH
 

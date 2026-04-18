@@ -30,6 +30,9 @@ HOTKEY_TOKEN_MAP = {
 }
 
 
+NO_VOICE_AUTO_STOP_MIN_SECONDS = 6.0
+
+
 def _normalize_hotkey(push_key: str) -> str:
     parsed: list[str] = []
     for token in push_key.strip().lower().split("+"):
@@ -82,6 +85,7 @@ class PushToTalkApp:
         self._is_recording = False
         self._busy = False
         self._lock = threading.Lock()
+        self._recording_started_at: float | None = None
 
     def _process_audio(self, audio_path: Path) -> None:
         text = self.transcriber.transcribe_file(audio_path)
@@ -109,6 +113,7 @@ class PushToTalkApp:
 
             self.recorder.begin_capture(silence_threshold=self.config.silence_threshold)
             self._is_recording = True
+            self._recording_started_at = time.monotonic()
         print("Recording started")
         send_notification("LKJ", "Recording started")
 
@@ -119,6 +124,7 @@ class PushToTalkApp:
 
             self._is_recording = False
             self._busy = True
+            self._recording_started_at = None
 
         if reason == "silence":
             print("Recording stopped automatically. Transcribing...")
@@ -126,8 +132,17 @@ class PushToTalkApp:
             print("Recording stopped. Transcribing...")
         send_notification("LKJ", "Recording stopped")
 
-        audio = self.recorder.end_capture()
-        audio = trim_silence(audio, threshold=self.config.silence_threshold)
+        raw_audio = self.recorder.end_capture()
+        raw_duration = len(raw_audio) / float(self.config.sample_rate)
+        trimmed_audio = trim_silence(raw_audio, threshold=self.config.silence_threshold)
+        trimmed_duration = len(trimmed_audio) / float(self.config.sample_rate)
+
+        audio = trimmed_audio
+        if (
+            trimmed_duration < self.config.min_seconds
+            and raw_duration >= self.config.min_seconds
+        ):
+            audio = raw_audio
 
         duration = len(audio) / float(self.config.sample_rate)
         if duration < self.config.min_seconds:
@@ -154,13 +169,25 @@ class PushToTalkApp:
         with self._lock:
             if self._busy or not self._is_recording:
                 return
+            started_at = self._recording_started_at
 
         has_voice, last_voice_time, _last_peak = self.recorder.capture_activity()
-        if not has_voice or last_voice_time is None:
+        now = time.monotonic()
+
+        if has_voice and last_voice_time is not None:
+            silent_for = now - last_voice_time
+            if silent_for >= self.config.auto_stop_silence_seconds:
+                self._stop_capture(reason="silence")
             return
 
-        silent_for = time.monotonic() - last_voice_time
-        if silent_for >= self.config.auto_stop_silence_seconds:
+        if started_at is None:
+            return
+
+        no_voice_timeout = max(
+            NO_VOICE_AUTO_STOP_MIN_SECONDS,
+            self.config.auto_stop_silence_seconds * 4.0,
+        )
+        if now - started_at >= no_voice_timeout:
             self._stop_capture(reason="silence")
 
     def _on_start_hotkey(self) -> None:
@@ -218,6 +245,7 @@ class PushToTalkApp:
                 is_recording = self._is_recording
                 self._is_recording = False
                 self._busy = False
+                self._recording_started_at = None
 
             if is_recording:
                 self.recorder.end_capture()

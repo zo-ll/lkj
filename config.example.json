@@ -7,7 +7,7 @@
   "stop_hotkey": "",
   "min_seconds": 0.2,
   "auto_stop_silence_seconds": 1.2,
-  "silence_threshold": 0.005,
+  "silence_threshold": 0.003,
   "offline_only": true,
   "transcript_log_path": "~/.local/share/lkj/transcripts.log"
 }
