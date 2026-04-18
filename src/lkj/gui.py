@@ -23,6 +23,7 @@ class SettingsWindow:
 
         self._model_name_var = tk.StringVar(value=self.config.model_name)
         self._device_var = tk.StringVar(value=self.config.device)
+        self._input_device_var = tk.StringVar(value=self.config.input_device)
         self._sample_rate_var = tk.StringVar(value=str(self.config.sample_rate))
         self._channels_var = tk.StringVar(value=str(self.config.channels))
         self._start_hotkey_var = tk.StringVar(value=self.config.start_hotkey)
@@ -47,30 +48,31 @@ class SettingsWindow:
 
         self._add_entry(frame, 0, "Model", self._model_name_var)
         self._add_entry(frame, 1, "Device", self._device_var)
-        self._add_entry(frame, 2, "Sample rate", self._sample_rate_var)
-        self._add_entry(frame, 3, "Channels", self._channels_var)
-        self._add_entry(frame, 4, "Start hotkey", self._start_hotkey_var)
-        self._add_entry(frame, 5, "Stop hotkey", self._stop_hotkey_var)
-        self._add_entry(frame, 6, "Min seconds", self._min_seconds_var)
-        self._add_entry(frame, 7, "Auto-stop silence", self._auto_stop_silence_var)
-        self._add_entry(frame, 8, "Silence threshold", self._silence_threshold_var)
-        self._add_entry(frame, 9, "Transcript log", self._transcript_log_var)
+        self._add_entry(frame, 2, "Input device", self._input_device_var)
+        self._add_entry(frame, 3, "Sample rate", self._sample_rate_var)
+        self._add_entry(frame, 4, "Channels", self._channels_var)
+        self._add_entry(frame, 5, "Start hotkey", self._start_hotkey_var)
+        self._add_entry(frame, 6, "Stop hotkey", self._stop_hotkey_var)
+        self._add_entry(frame, 7, "Min seconds", self._min_seconds_var)
+        self._add_entry(frame, 8, "Auto-stop silence", self._auto_stop_silence_var)
+        self._add_entry(frame, 9, "Silence threshold", self._silence_threshold_var)
+        self._add_entry(frame, 10, "Transcript log", self._transcript_log_var)
 
         offline = ttk.Checkbutton(
             frame,
             text="Offline only",
             variable=self._offline_only_var,
         )
-        offline.grid(row=10, column=0, columnspan=2, sticky="w", pady=(6, 4))
+        offline.grid(row=11, column=0, columnspan=2, sticky="w", pady=(6, 4))
 
         note = ttk.Label(
             frame,
             text="If daemon is installed, Save automatically restarts it.",
         )
-        note.grid(row=11, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        note.grid(row=12, column=0, columnspan=2, sticky="w", pady=(0, 8))
 
         button_row = ttk.Frame(frame)
-        button_row.grid(row=12, column=0, columnspan=2, sticky="e")
+        button_row.grid(row=13, column=0, columnspan=2, sticky="e")
 
         save_button = ttk.Button(button_row, text="Save", command=self._save)
         save_button.grid(row=0, column=0, padx=(0, 6))
@@ -79,7 +81,7 @@ class SettingsWindow:
         close_button.grid(row=0, column=1)
 
         status = ttk.Label(frame, textvariable=self._status_var)
-        status.grid(row=13, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        status.grid(row=14, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
     def _add_entry(
         self,
@@ -133,6 +135,7 @@ class SettingsWindow:
             self.config,
             model_name=self._model_name_var.get().strip(),
             device=self._device_var.get().strip(),
+            input_device=self._input_device_var.get().strip(),
             sample_rate=sample_rate,
             channels=channels,
             start_hotkey=start_hotkey,

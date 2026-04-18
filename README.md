@@ -51,6 +51,7 @@ Fields:
 
 - `model_name`: default `nvidia/parakeet-tdt-0.6b-v2`
 - `device`: `cuda` or `cpu`
+- `input_device`: optional sounddevice input (e.g. `pulse`, `default`, or device name)
 - `sample_rate`: default `16000`
 - `channels`: default `1`
 - `start_hotkey`: default `alt+space`
@@ -77,6 +78,7 @@ lkj doctor --warmup
 - Hotkeys not working: run `systemctl --user status lkj-daemon.service`.
 - No hotkey events on Wayland: run under X11 session or grant input permissions.
 - Hotkey conflict with desktop shortcuts: change `start_hotkey`/`stop_hotkey`.
+- No speech detected repeatedly: set `input_device` to `pulse` in settings and retry.
 - `cuda=False` in doctor output: reinstall CUDA torch wheel.
 - Model load fails in offline mode: run one online warmup (`lkj --online doctor --warmup`).
 

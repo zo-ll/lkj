@@ -31,9 +31,15 @@ def write_wav(path: Path, audio: np.ndarray, sample_rate: int) -> None:
 
 
 class MicrophoneRecorder:
-    def __init__(self, sample_rate: int = 16000, channels: int = 1) -> None:
+    def __init__(
+        self,
+        sample_rate: int = 16000,
+        channels: int = 1,
+        input_device: str = "",
+    ) -> None:
         self.sample_rate = sample_rate
         self.channels = channels
+        self.input_device = input_device.strip()
 
         self._frames: list[np.ndarray] = []
         self._lock = threading.Lock()
@@ -73,6 +79,7 @@ class MicrophoneRecorder:
             channels=self.channels,
             dtype="float32",
             callback=self._callback,
+            device=self.input_device or None,
         )
         self._stream.start()
 
@@ -112,6 +119,12 @@ class MicrophoneRecorder:
 
     def record_blocking(self, seconds: float) -> np.ndarray:
         frames = int(seconds * self.sample_rate)
-        audio = sd.rec(frames, samplerate=self.sample_rate, channels=1, dtype="float32")
+        audio = sd.rec(
+            frames,
+            samplerate=self.sample_rate,
+            channels=1,
+            dtype="float32",
+            device=self.input_device or None,
+        )
         sd.wait()
         return np.squeeze(audio, axis=1).astype(np.float32)

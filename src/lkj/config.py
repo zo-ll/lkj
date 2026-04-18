@@ -13,6 +13,7 @@ DEFAULT_LOG_PATH = Path.home() / ".local" / "share" / "lkj" / "transcripts.log"
 class AppConfig:
     model_name: str = "nvidia/parakeet-tdt-0.6b-v2"
     device: str = "cuda"
+    input_device: str = ""
     sample_rate: int = 16000
     channels: int = 1
     start_hotkey: str = "alt+space"
@@ -31,6 +32,8 @@ def _from_dict(data: dict[str, object]) -> AppConfig:
         config.model_name = str(data["model_name"])
     if "device" in data:
         config.device = str(data["device"])
+    if "input_device" in data:
+        config.input_device = str(data["input_device"])
     if "sample_rate" in data:
         config.sample_rate = int(data["sample_rate"])
     if "channels" in data:
@@ -59,6 +62,7 @@ def load_config(
     config_path: Path | None = None,
     model_name: str | None = None,
     device: str | None = None,
+    input_device: str | None = None,
     start_hotkey: str | None = None,
     stop_hotkey: str | None = None,
     push_key: str | None = None,
@@ -79,6 +83,8 @@ def load_config(
         config = replace(config, model_name=model_name)
     if device is not None:
         config = replace(config, device=device)
+    if input_device is not None:
+        config = replace(config, input_device=input_device)
     if start_hotkey is not None:
         config = replace(config, start_hotkey=start_hotkey)
     if stop_hotkey is not None:
@@ -98,6 +104,7 @@ def save_config(config: AppConfig, config_path: Path | None = None) -> Path:
     payload: dict[str, object] = {
         "model_name": config.model_name,
         "device": config.device,
+        "input_device": config.input_device,
         "sample_rate": config.sample_rate,
         "channels": config.channels,
         "start_hotkey": config.start_hotkey,

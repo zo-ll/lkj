@@ -5,6 +5,7 @@ import threading
 import time
 from pathlib import Path
 
+import numpy as np
 from pynput import keyboard
 
 from .asr import ParakeetTranscriber
@@ -31,6 +32,9 @@ HOTKEY_TOKEN_MAP = {
 
 
 NO_VOICE_AUTO_STOP_MIN_SECONDS = 6.0
+LOW_AUDIO_PEAK = 0.08
+TARGET_AUDIO_PEAK = 0.25
+MAX_AUTO_GAIN = 30.0
 
 
 def _normalize_hotkey(push_key: str) -> str:
@@ -68,7 +72,9 @@ class PushToTalkApp:
     def __init__(self, config: AppConfig) -> None:
         self.config = config
         self.recorder = MicrophoneRecorder(
-            sample_rate=config.sample_rate, channels=config.channels
+            sample_rate=config.sample_rate,
+            channels=config.channels,
+            input_device=config.input_device,
         )
         self.transcriber = ParakeetTranscriber(
             model_name=config.model_name,
@@ -87,13 +93,7 @@ class PushToTalkApp:
         self._lock = threading.Lock()
         self._recording_started_at: float | None = None
 
-    def _process_audio(self, audio_path: Path) -> None:
-        text = self.transcriber.transcribe_file(audio_path)
-        if not text:
-            print("No speech detected")
-            send_notification("LKJ", "No speech detected")
-            return
-
+    def _publish_transcript(self, text: str) -> None:
         copied = copy_to_clipboard(text)
         append_transcript(self.config.transcript_log_path, text)
         if copied:
@@ -102,6 +102,32 @@ class PushToTalkApp:
         else:
             print("Transcription ready, but clipboard copy failed")
             send_notification("LKJ", "Transcription ready (clipboard unavailable)")
+
+    def _transcribe_audio(self, audio: np.ndarray) -> str:
+        candidates: list[np.ndarray] = [audio.astype(np.float32)]
+        peak = float(np.max(np.abs(audio))) if audio.size > 0 else 0.0
+
+        if 0.0 < peak < LOW_AUDIO_PEAK:
+            gain = min(MAX_AUTO_GAIN, TARGET_AUDIO_PEAK / peak)
+            boosted = np.clip(audio * gain, -1.0, 1.0).astype(np.float32)
+            candidates.append(boosted)
+
+        for candidate in candidates:
+            with tempfile.NamedTemporaryFile(
+                prefix="lkj_", suffix=".wav", delete=False
+            ) as handle:
+                path = Path(handle.name)
+
+            try:
+                write_wav(path, candidate, self.config.sample_rate)
+                text = self.transcriber.transcribe_file(path)
+            finally:
+                path.unlink(missing_ok=True)
+
+            if text:
+                return text
+
+        return ""
 
     def _start_capture(self) -> None:
         with self._lock:
@@ -153,16 +179,13 @@ class PushToTalkApp:
             return
 
         try:
-            with tempfile.NamedTemporaryFile(
-                prefix="lkj_", suffix=".wav", delete=False
-            ) as handle:
-                path = Path(handle.name)
+            text = self._transcribe_audio(audio)
+            if not text:
+                print("No speech detected")
+                send_notification("LKJ", "No speech detected")
+                return
 
-            try:
-                write_wav(path, audio, self.config.sample_rate)
-                self._process_audio(path)
-            finally:
-                path.unlink(missing_ok=True)
+            self._publish_transcript(text)
         except Exception as exc:
             print(f"Transcription failed: {exc}")
             send_notification("LKJ", "Transcription failed")
@@ -260,7 +283,9 @@ class PushToTalkApp:
 
 def transcribe_once(config: AppConfig, seconds: float) -> None:
     recorder = MicrophoneRecorder(
-        sample_rate=config.sample_rate, channels=config.channels
+        sample_rate=config.sample_rate,
+        channels=config.channels,
+        input_device=config.input_device,
     )
     transcriber = ParakeetTranscriber(
         model_name=config.model_name,
@@ -269,24 +294,42 @@ def transcribe_once(config: AppConfig, seconds: float) -> None:
     )
 
     print(f"Recording {seconds:.1f}s...")
-    audio = recorder.record_blocking(seconds=seconds)
-    audio = trim_silence(audio, threshold=config.silence_threshold)
+    raw_audio = recorder.record_blocking(seconds=seconds)
+    trimmed_audio = trim_silence(raw_audio, threshold=config.silence_threshold)
+    audio = trimmed_audio
+
+    raw_duration = len(raw_audio) / float(config.sample_rate)
+    trimmed_duration = len(trimmed_audio) / float(config.sample_rate)
+    if trimmed_duration < config.min_seconds and raw_duration >= config.min_seconds:
+        audio = raw_audio
 
     if len(audio) / float(config.sample_rate) < config.min_seconds:
         print("Audio too short")
         send_notification("LKJ", "Audio too short, try again")
         return
 
-    with tempfile.NamedTemporaryFile(
-        prefix="lkj_once_", suffix=".wav", delete=False
-    ) as handle:
-        path = Path(handle.name)
+    candidates: list[np.ndarray] = [audio.astype(np.float32)]
+    peak = float(np.max(np.abs(audio))) if audio.size > 0 else 0.0
+    if 0.0 < peak < LOW_AUDIO_PEAK:
+        gain = min(MAX_AUTO_GAIN, TARGET_AUDIO_PEAK / peak)
+        boosted = np.clip(audio * gain, -1.0, 1.0).astype(np.float32)
+        candidates.append(boosted)
 
-    try:
-        write_wav(path, audio, config.sample_rate)
-        text = transcriber.transcribe_file(path)
-    finally:
-        path.unlink(missing_ok=True)
+    text = ""
+    for candidate in candidates:
+        with tempfile.NamedTemporaryFile(
+            prefix="lkj_once_", suffix=".wav", delete=False
+        ) as handle:
+            path = Path(handle.name)
+
+        try:
+            write_wav(path, candidate, config.sample_rate)
+            text = transcriber.transcribe_file(path)
+        finally:
+            path.unlink(missing_ok=True)
+
+        if text:
+            break
 
     if not text:
         print("No speech detected")

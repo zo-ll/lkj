@@ -16,6 +16,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", type=str, default=None, help="Model name")
     parser.add_argument("--device", type=str, default=None, help="Device (cuda or cpu)")
     parser.add_argument(
+        "--input-device",
+        type=str,
+        default=None,
+        help="Audio input device (e.g. pulse, default, or name)",
+    )
+    parser.add_argument(
         "--start-hotkey", type=str, default=None, help="Start recording hotkey"
     )
     parser.add_argument(
@@ -70,6 +76,7 @@ def _resolve_config(args: argparse.Namespace) -> AppConfig:
         config_path=args.config,
         model_name=args.model,
         device=args.device,
+        input_device=args.input_device,
         start_hotkey=args.start_hotkey,
         stop_hotkey=args.stop_hotkey,
         push_key=args.push_key,
