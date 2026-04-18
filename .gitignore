@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+build/
+dist/
+*.egg-info/
+
+# Runtime
+tmp/
+logs/
+*.wav
+
+# Local config
+.env
+config.local.json

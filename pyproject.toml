@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lkj"
+version = "0.1.0"
+description = "Local-only push-to-talk voice-to-text with NVIDIA Parakeet"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "numpy>=1.26,<3.0",
+  "scipy>=1.12,<2.0",
+  "sounddevice>=0.4.6,<1.0",
+  "pyperclip>=1.8.2,<2.0",
+  "pynput>=1.7.7,<2.0",
+  "nemo_toolkit[asr]>=2.0.0,<3.0.0",
+]
+
+[project.scripts]
+lkj = "lkj.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
