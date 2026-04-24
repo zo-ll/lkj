@@ -77,7 +77,7 @@ EOF
 
 if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
   systemctl --user daemon-reload
-  systemctl --user enable --now lkj-daemon.service
+  systemctl --user start lkj-daemon.service
   rm -f "$HOME/.config/autostart/lkj-daemon.desktop"
   echo "Daemon installed with systemd user service"
 else
@@ -89,7 +89,7 @@ Name=LKJ Daemon
 Comment=Start LKJ hotkey daemon on login
 Exec=$HOME/.local/bin/lkj daemon
 Terminal=false
-X-GNOME-Autostart-enabled=true
+  X-GNOME-Autostart-enabled=false
 EOF
 
   if ! pgrep -f "\.local/bin/lkj daemon" >/dev/null 2>&1; then

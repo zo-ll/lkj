@@ -32,7 +32,7 @@ What install does:
 - Runs one-time online warmup to cache model files.
 - Installs `lkj` launcher to `~/.local/bin/lkj`.
 - Adds `LKJ` desktop entry for app launcher/rofi.
-- Installs and starts `lkj-daemon.service` (or desktop autostart fallback).
+- Starts `lkj-daemon` immediately after install, but does not enable auto-start on login.
 
 ## Daily usage
 
