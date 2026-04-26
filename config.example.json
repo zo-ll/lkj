@@ -14,5 +14,6 @@
   "auto_stop_silence_seconds": 1.8,
   "silence_threshold": 0.003,
   "offline_only": true,
+  "remove_fillers": true,
   "transcript_log_path": "~/.local/share/lkj/transcripts.log"
 }

@@ -26,6 +26,7 @@ class AppConfig:
     auto_stop_silence_seconds: float = 1.8
     silence_threshold: float = 0.003
     offline_only: bool = True
+    remove_fillers: bool = True
     save_transcripts: bool = False
     transcript_log_path: Path = DEFAULT_LOG_PATH
 
@@ -65,6 +66,8 @@ def _from_dict(data: dict[str, object]) -> AppConfig:
         config.silence_threshold = float(data["silence_threshold"])
     if "offline_only" in data:
         config.offline_only = bool(data["offline_only"])
+    if "remove_fillers" in data:
+        config.remove_fillers = bool(data["remove_fillers"])
     if "save_transcripts" in data:
         config.save_transcripts = bool(data["save_transcripts"])
     if "transcript_log_path" in data:
@@ -132,6 +135,7 @@ def save_config(config: AppConfig, config_path: Path | None = None) -> Path:
         "auto_stop_silence_seconds": config.auto_stop_silence_seconds,
         "silence_threshold": config.silence_threshold,
         "offline_only": config.offline_only,
+        "remove_fillers": config.remove_fillers,
         "save_transcripts": config.save_transcripts,
         "transcript_log_path": str(config.transcript_log_path),
     }

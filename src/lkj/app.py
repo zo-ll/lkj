@@ -83,6 +83,7 @@ class PushToTalkApp:
             model_name=config.model_name,
             device=config.device,
             offline_only=config.offline_only,
+            remove_fillers=config.remove_fillers,
         )
 
         self._start_hotkey = _normalize_hotkey(config.start_hotkey)
@@ -406,6 +407,7 @@ def transcribe_once(config: AppConfig, seconds: float) -> None:
         model_name=config.model_name,
         device=config.device,
         offline_only=config.offline_only,
+        remove_fillers=config.remove_fillers,
     )
 
     print(f"Recording {seconds:.1f}s...")

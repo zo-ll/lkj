@@ -71,9 +71,14 @@ def _check_model(config: AppConfig, warmup: bool) -> Check:
             model_name=config.model_name,
             device=config.device,
             offline_only=config.offline_only,
+            remove_fillers=config.remove_fillers,
         )
         transcriber.load()
-        return Check(name="model", ok=True, detail=f"loaded {config.model_name}")
+        loaded_device = transcriber.loaded_device or config.device
+        detail = f"loaded {config.model_name} on {loaded_device}"
+        if loaded_device != config.device:
+            detail = f"{detail} (fallback from {config.device})"
+        return Check(name="model", ok=True, detail=detail)
     except Exception as exc:  # pragma: no cover
         return Check(name="model", ok=False, detail=f"load failed: {exc}")
 

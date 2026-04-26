@@ -68,6 +68,7 @@ Fields:
 - `auto_stop_silence_seconds`: trailing silence before auto-stop
 - `silence_threshold`: amplitude threshold used for silence detection
 - `offline_only`: `true` for no network model fetch after cache
+- `remove_fillers`: omit hesitation words like `uh`, `um`, and `ah` from transcripts (`true` by default)
 - `transcript_log_path`: local transcript log path
 
 ## Commands
