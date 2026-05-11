@@ -17,6 +17,12 @@ dependencies = [
   "nemo_toolkit[asr]>=2.0.0,<3.0.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-mock>=3.14",
+]
+
 [project.scripts]
 lkj = "lkj.cli:main"
 
@@ -25,3 +31,7 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
