@@ -43,11 +43,11 @@
 - [ ] Add platform-specific hotkey providers later.
 - [ ] Add `lkj serve` local API.
 
-## Milestone 6: Embeddable package
+## Milestone 6: Protocol-first integration
 
-- [ ] Expose public package API after internals stabilize.
-- [ ] Make `lkj` usable as a library by any Go agent/tool without depending on a specific runtime.
-- [ ] Keep CLI as thin wrapper over library.
+- [ ] Stabilize generic integration protocols before exposing language-specific APIs.
+- [ ] Support any agent/tool/runtime through HTTP, WebSocket, stdout/stdin, files, or subprocess pipes.
+- [ ] Keep Go package API optional, not the primary integration path.
 
 ## Later
 
