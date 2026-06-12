@@ -16,7 +16,7 @@ Designed as a standalone tool: agents can consume its transcripts over generic s
 - Go binary, no Python environment.
 - Local speech-to-text by default.
 - `whisper.cpp` backend first.
-- Embeddable Go package for agents.
+- Protocol-first integration for any agent/tool/runtime.
 - CLI/daemon/server before GUI.
 - Cross-platform design.
 
