@@ -32,7 +32,7 @@
 
 - [ ] Stabilize HTTP sink contract.
 - [ ] Add WebSocket/event sink.
-- [ ] Design `oi` integration.
+- [ ] Design generic agent integration contracts.
 - [ ] Add generic stdin/terminal sink.
 - [ ] Add examples for talking to coding agents.
 
@@ -46,7 +46,7 @@
 ## Milestone 6: Embeddable package
 
 - [ ] Expose public package API after internals stabilize.
-- [ ] Make `lkj` usable as a library by `oi` or other Go agents.
+- [ ] Make `lkj` usable as a library by any Go agent/tool without depending on a specific runtime.
 - [ ] Keep CLI as thin wrapper over library.
 
 ## Later
