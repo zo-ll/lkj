@@ -1,19 +1,16 @@
-.PHONY: gui daemon run once doctor doctor-warmup
+.PHONY: build test fmt vet run
 
-gui:
-	python -m lkj.cli gui
+build:
+	go build -o bin/lkj ./cmd/lkj
 
-daemon:
-	python -m lkj.cli daemon
+test:
+	go test ./...
+
+fmt:
+	gofmt -w .
+
+vet:
+	go vet ./...
 
 run:
-	python -m lkj.cli daemon
-
-once:
-	python -m lkj.cli once --seconds 5
-
-doctor:
-	python -m lkj.cli doctor
-
-doctor-warmup:
-	python -m lkj.cli doctor --warmup
+	go run ./cmd/lkj

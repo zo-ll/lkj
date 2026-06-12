@@ -1,19 +1,7 @@
 {
-  "model_name": "nvidia/parakeet-tdt-0.6b-v2",
-  "device": "cuda",
-  "input_device": "",
-  "preload_model": true,
-  "unload_model_after_seconds": 0.0,
-  "daemon_poll_seconds": 0.2,
-  "sample_rate": 16000,
-  "channels": 1,
-  "start_hotkey": "alt+space",
-  "stop_hotkey": "",
-  "auto_stop_enabled": false,
-  "min_seconds": 0.2,
-  "auto_stop_silence_seconds": 1.8,
-  "silence_threshold": 0.003,
-  "offline_only": true,
-  "remove_fillers": true,
-  "transcript_log_path": "~/.local/share/lkj/transcripts.log"
+  "stt_backend": "whispercpp",
+  "whisper_bin": "whisper-cli",
+  "model_path": "models/ggml-base.en.bin",
+  "output": "stdout",
+  "http_url": "http://localhost:8765/input"
 }
