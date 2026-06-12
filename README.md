@@ -8,7 +8,7 @@ Tiny local voice input bridge for agents.
 microphone or wav -> local STT backend -> transcript -> agent/output sink
 ```
 
-Designed to pair well with [`oi`](https://github.com/zo-ll/oi): minimal, embeddable, local-first agent tooling.
+Designed as a standalone tool: agents can consume its transcripts over generic sinks like stdout, HTTP, WebSocket, or stdin. No specific agent runtime should be required.
 
 ## Goals
 
@@ -38,7 +38,7 @@ Not implemented yet:
 - live microphone recording.
 - push-to-talk hotkeys.
 - clipboard sink.
-- `oi` integration.
+- generic agent adapters.
 - bundled whisper.cpp binaries/models.
 
 ## Quick start
