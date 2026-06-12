@@ -40,10 +40,24 @@
 
 - [ ] Add `lkj listen` loop.
 - [ ] Add push-to-talk abstraction.
+- [ ] Add hold-to-talk and toggle-to-talk modes.
+- [ ] Add cancel-current-recording action.
 - [ ] Add platform-specific hotkey providers later.
 - [ ] Add `lkj serve` local API.
 
-## Milestone 6: Protocol-first integration
+## Milestone 6: Frontend/UX exploration
+
+- [ ] Keep core frontend-agnostic: triggers should call the same record/transcribe/route pipeline.
+- [ ] Design CLI mode as baseline frontend.
+- [ ] Design daemon + hotkey mode for daily use.
+- [ ] Design local server mode for agents/tools.
+- [ ] Evaluate local web UI for config/status.
+- [ ] Evaluate native wrapper options: Tauri, Wails, Fyne.
+- [ ] Decide whether tray/menu-bar and overlay belong in first desktop release.
+
+See [docs/frontend.md](docs/frontend.md).
+
+## Milestone 7: Protocol-first integration
 
 - [ ] Stabilize generic integration protocols before exposing language-specific APIs.
 - [ ] Support any agent/tool/runtime through HTTP, WebSocket, stdout/stdin, files, or subprocess pipes.
