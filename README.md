@@ -133,3 +133,5 @@ type Sink interface {
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md).
+
+Frontend/UX notes live in [docs/frontend.md](docs/frontend.md).
