@@ -1,24 +1,103 @@
 # lkj
 
-Local-first hotkey voice-to-text app using NVIDIA Parakeet.
+Local speech-to-text bridge for AI agents.
 
-## Features
+`lkj` started as a Linux push-to-talk dictation app. The new direction is broader: a cross-platform app that lets you talk to local and remote agents using local speech-to-text models.
 
-- One-command install script for desktop setup.
-- GUI settings app (launch from `lkj` or app launcher/rofi).
-- Background hotkey daemon (no terminal needed for daily use).
-- Manual stop by default, with optional auto-stop on silence.
-- Desktop notifications when recording starts and stops.
-- Clipboard auto-copy and local transcript log.
+## Vision
 
-## Requirements
+```text
+microphone -> local STT model -> transcript -> agent / app / output target
+```
 
-- Linux desktop.
-- NVIDIA GPU + driver with CUDA runtime.
-- Python 3.10-3.12 (NeMo ASR compatibility window).
-- `portaudio` runtime for `sounddevice`.
+Goals:
 
-## Install
+- local-first speech-to-text
+- push-to-talk by default
+- cross-platform desktop support over time
+- pluggable STT backends
+- pluggable output targets
+- simple integrations for coding agents and local LLM tools
+
+Non-goals:
+
+- cloud-required transcription
+- Linux-only design
+- one hard-coded model/runtime
+- replacing ASR engines like whisper.cpp
+
+## Current state
+
+Today `lkj` is an early Linux desktop app using NVIDIA Parakeet through NeMo.
+
+Current features:
+
+- GUI settings app
+- background hotkey daemon
+- manual stop or optional auto-stop on silence
+- desktop notifications
+- clipboard auto-copy
+- local transcript log
+- NVIDIA Parakeet backend
+
+Current limits:
+
+- Linux-focused
+- CUDA/NVIDIA-focused
+- Python/NeMo install is heavy
+- output is mostly clipboard/log-oriented
+
+## Target architecture
+
+```text
+lkj core
+  audio capture
+  session control
+  config
+
+STT backends
+  whisper.cpp
+  Parakeet / NeMo
+  faster-whisper
+  future local models
+
+output targets
+  clipboard
+  type into active app
+  stdout
+  HTTP webhook
+  WebSocket
+  terminal stdin
+  agent adapters
+```
+
+Core idea: `lkj` should not be only a dictation app. Dictation is one output target. Agent control is the main use case.
+
+## Example future commands
+
+```bash
+lkj once --seconds 5 --output stdout
+lkj listen --backend whispercpp --output clipboard
+lkj listen --output http --url http://localhost:8765/input
+lkj agent -- pi
+lkj agent -- codex
+```
+
+## Agent use cases
+
+- talk to a coding agent in a terminal
+- send voice prompts to a local agent HTTP endpoint
+- dictate into browser-based chat apps
+- trigger command routing with prefixes like `agent`, `terminal`, or `note`
+- keep all speech recognition local
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md).
+
+## Current install
+
+Linux/NVIDIA path still works as the first prototype.
 
 ```bash
 git clone https://github.com/zo-ll/lkj
@@ -26,52 +105,7 @@ cd lkj
 ./scripts/install.sh
 ```
 
-What install does:
-
-- Creates `.venv` and installs dependencies.
-- Runs one-time online warmup to cache model files.
-- Installs `lkj` launcher to `~/.local/bin/lkj`.
-- Adds `LKJ` desktop entry for app launcher/rofi.
-- Starts `lkj-daemon` immediately after install, but does not enable auto-start on login.
-
-## Daily usage
-
-- Open settings from app launcher/rofi (`LKJ`) or run `lkj`.
-- In settings, choose `Input device` from the dropdown list (or type a custom value).
-- Recording does not start when opening settings.
-- Press `start_hotkey` to begin recording.
-- By default, press `start_hotkey` again to stop manually.
-- Optionally enable auto-stop in settings to stop on trailing silence.
-- If `stop_hotkey` is set, press it to stop immediately.
-- Notifications show when recording starts and stops.
-- Default mode prioritizes responsiveness: model preloads on startup and stays loaded.
-- To reduce idle power later, disable preload and set a non-zero idle unload timeout.
-
-## Configuration
-
-Config path: `~/.config/lkj/config.json`
-
-Fields:
-
-- `model_name`: default `nvidia/parakeet-tdt-0.6b-v2`
-- `device`: `cuda` or `cpu`
-- `input_device`: optional sounddevice input (e.g. `pulse`, `default`, or device name)
-- `preload_model`: load and warm model at daemon startup (`true` by default)
-- `unload_model_after_seconds`: unload model after idle seconds (`0` disables unload, default)
-- `daemon_poll_seconds`: daemon loop interval (`0.2` default)
-- `sample_rate`: default `16000`
-- `channels`: default `1`
-- `start_hotkey`: default `alt+space`
-- `stop_hotkey`: optional separate stop key, default empty
-- `auto_stop_enabled`: `false` by default (manual stop mode)
-- `min_seconds`: minimum speech duration before inference
-- `auto_stop_silence_seconds`: trailing silence before auto-stop
-- `silence_threshold`: amplitude threshold used for silence detection
-- `offline_only`: `true` for no network model fetch after cache
-- `remove_fillers`: omit hesitation words like `uh`, `um`, and `ah` from transcripts (`true` by default)
-- `transcript_log_path`: local transcript log path
-
-## Commands
+## Current commands
 
 ```bash
 lkj                 # open settings GUI
@@ -82,24 +116,23 @@ lkj doctor
 lkj doctor --warmup
 ```
 
-## Troubleshooting
+## Configuration
 
-- Hotkeys not working: run `systemctl --user status lkj-daemon.service`.
-- No hotkey events on Wayland: run under X11 session or grant input permissions.
-- Hotkey conflict with desktop shortcuts: change `start_hotkey`/`stop_hotkey`.
-- No speech detected repeatedly: set `input_device` to `pulse` in settings and retry.
-- If idle power is too high, set `preload_model=false` and use a non-zero `unload_model_after_seconds`.
-- Accuracy for non-English speech may be limited with the default Parakeet model.
-- `cuda=False` in doctor output: reinstall CUDA torch wheel.
-- Model load fails in offline mode: run one online warmup (`lkj --online doctor --warmup`).
+Config path: `~/.config/lkj/config.json`
 
-## Status
+Important current fields:
 
-- [x] Repo scaffold
-- [x] Core ASR pipeline
-- [x] Push-to-talk recorder
-- [x] Clipboard + logging
-- [x] Diagnostics + docs
-- [x] GUI settings app
-- [x] Desktop installer and launcher
-- [x] Background daemon with notifications and auto-stop
+- `model_name`: default `nvidia/parakeet-tdt-0.6b-v2`
+- `device`: `cuda` or `cpu`
+- `input_device`: optional sounddevice input
+- `preload_model`: load and warm model at daemon startup
+- `unload_model_after_seconds`: unload model after idle seconds
+- `start_hotkey`: default `alt+space`
+- `stop_hotkey`: optional separate stop key
+- `auto_stop_enabled`: manual stop by default
+- `offline_only`: avoid network model fetch after cache
+- `transcript_log_path`: local transcript log path
+
+## Project status
+
+Early prototype. Direction likely to change. Contributions and experiments should align with the roadmap: backend abstraction, output targets, whisper.cpp support, and agent integrations.
