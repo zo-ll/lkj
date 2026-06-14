@@ -2,6 +2,11 @@
   "stt_backend": "whispercpp",
   "whisper_bin": "whisper-cli",
   "model_path": "models/ggml-base.en.bin",
+  "parakeet_command": "python3 scripts/parakeet_transcribe.py",
+  "parakeet_model": "nvidia/parakeet-tdt-0.6b-v2",
+  "parakeet_device": "cuda",
+  "parakeet_offline": true,
+  "record_device": "default",
   "output": "stdout",
   "http_url": "http://localhost:8765/input"
 }

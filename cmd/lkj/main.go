@@ -53,14 +53,20 @@ Usage:
   lkj version
   lkj doctor [--config path]
   lkj once --file input.wav --model model.bin [options]
+  lkj once --seconds 5 --model model.bin [options]
 
 Options for once:
   --config path        config file path
   --file path          input wav file
-  --seconds n          record microphone for n seconds (not implemented yet)
+  --seconds n          record microphone for n seconds
+  --device name        recorder input device
   --backend name       stt backend (whispercpp)
   --whisper-bin path   whisper.cpp CLI binary
   --model path         whisper.cpp ggml model path
+  --parakeet-command path  Parakeet helper command
+  --parakeet-model name    Parakeet model name
+  --parakeet-device name   Parakeet device: cuda or cpu
+  --parakeet-online        allow Parakeet helper to fetch model files
   --language code      optional language code
   --out name           output sink: stdout, http, file, clipboard
   --url url            HTTP sink URL
@@ -83,6 +89,11 @@ func doctor(args []string) error {
 	fmt.Println("stt_backend", cfg.STTBackend)
 	fmt.Println("whisper_bin", cfg.WhisperBin)
 	fmt.Println("model_path", cfg.ModelPath)
+	fmt.Println("parakeet_command", cfg.ParakeetCommand)
+	fmt.Println("parakeet_model", cfg.ParakeetModel)
+	fmt.Println("parakeet_device", cfg.ParakeetDevice)
+	fmt.Println("parakeet_offline", cfg.ParakeetOffline)
+	fmt.Println("record_device", cfg.RecordDevice)
 	fmt.Println("output", cfg.Output)
 	return nil
 }
@@ -92,9 +103,14 @@ func once(args []string) error {
 	cfgPath := fs.String("config", "", "config file path")
 	inputFile := fs.String("file", "", "input wav file")
 	seconds := fs.Float64("seconds", 0, "record microphone seconds")
+	device := fs.String("device", "", "recorder input device")
 	backend := fs.String("backend", "", "stt backend")
 	whisperBin := fs.String("whisper-bin", "", "whisper.cpp binary")
 	model := fs.String("model", "", "model path")
+	parakeetCommand := fs.String("parakeet-command", "", "Parakeet helper command")
+	parakeetModel := fs.String("parakeet-model", "", "Parakeet model name")
+	parakeetDevice := fs.String("parakeet-device", "", "Parakeet device")
+	parakeetOnline := fs.Bool("parakeet-online", false, "allow Parakeet downloads")
 	language := fs.String("language", "", "language code")
 	out := fs.String("out", "", "output sink")
 	url := fs.String("url", "", "http output url")
@@ -107,9 +123,9 @@ func once(args []string) error {
 	if err != nil {
 		return err
 	}
-	applyOverrides(&cfg, *backend, *whisperBin, *model, *language, *out, *url, *fileOut)
+	applyOverrides(&cfg, *backend, *whisperBin, *model, *language, *device, *parakeetCommand, *parakeetModel, *parakeetDevice, *parakeetOnline, *out, *url, *fileOut)
 
-	source, err := buildSource(*inputFile, *seconds)
+	source, err := buildSource(*inputFile, *seconds, cfg.RecordDevice)
 	if err != nil {
 		return err
 	}
@@ -129,7 +145,7 @@ func once(args []string) error {
 	return err
 }
 
-func applyOverrides(cfg *config.Config, backend, whisperBin, model, language, out, url, fileOut string) {
+func applyOverrides(cfg *config.Config, backend, whisperBin, model, language, device, parakeetCommand, parakeetModel, parakeetDevice string, parakeetOnline bool, out, url, fileOut string) {
 	if backend != "" {
 		cfg.STTBackend = backend
 	}
@@ -142,6 +158,21 @@ func applyOverrides(cfg *config.Config, backend, whisperBin, model, language, ou
 	if language != "" {
 		cfg.Language = language
 	}
+	if device != "" {
+		cfg.RecordDevice = device
+	}
+	if parakeetCommand != "" {
+		cfg.ParakeetCommand = parakeetCommand
+	}
+	if parakeetModel != "" {
+		cfg.ParakeetModel = parakeetModel
+	}
+	if parakeetDevice != "" {
+		cfg.ParakeetDevice = parakeetDevice
+	}
+	if parakeetOnline {
+		cfg.ParakeetOffline = false
+	}
 	if out != "" {
 		cfg.Output = out
 	}
@@ -153,12 +184,12 @@ func applyOverrides(cfg *config.Config, backend, whisperBin, model, language, ou
 	}
 }
 
-func buildSource(inputFile string, seconds float64) (audio.Source, error) {
+func buildSource(inputFile string, seconds float64, device string) (audio.Source, error) {
 	if inputFile != "" {
 		return audio.ExistingWAV{Path: inputFile}, nil
 	}
 	if seconds > 0 {
-		return audio.Recorder{Seconds: seconds}, nil
+		return audio.Recorder{Seconds: seconds, Device: device}, nil
 	}
 	return nil, errors.New("missing audio source: pass --file input.wav or --seconds N")
 }
@@ -167,6 +198,8 @@ func buildTranscriber(cfg config.Config) (stt.Transcriber, error) {
 	switch cfg.STTBackend {
 	case "", "whispercpp":
 		return stt.WhisperCPP{Bin: cfg.WhisperBin, ModelPath: cfg.ModelPath, Language: cfg.Language}, nil
+	case "parakeet":
+		return stt.Parakeet{Command: cfg.ParakeetCommand, ModelName: cfg.ParakeetModel, Device: cfg.ParakeetDevice, Offline: cfg.ParakeetOffline}, nil
 	default:
 		return nil, fmt.Errorf("unsupported stt backend %q", cfg.STTBackend)
 	}

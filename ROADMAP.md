@@ -8,9 +8,10 @@
 - [x] Define STT backend interface.
 - [x] Define output sink interface.
 - [x] Add `whisper.cpp` subprocess backend.
+- [x] Add optional Parakeet subprocess backend on separate branch.
 - [x] Add stdout/file/HTTP sinks.
 - [x] Add basic CLI.
-- [ ] Add tests for CLI/config/pipeline.
+- [x] Add tests for CLI/config/pipeline.
 
 ## Milestone 2: CPU-only whisper.cpp path
 
@@ -20,11 +21,20 @@
 - [ ] Improve transcript parsing from whisper.cpp output.
 - [ ] Support quiet JSON/text output modes if available.
 
+## Branch: optional Parakeet backend
+
+- [x] Keep Parakeet off `main` while the core matures.
+- [x] Add Go subprocess backend contract for Parakeet.
+- [x] Add optional Python/NeMo helper script.
+- [ ] Smoke test with an installed Parakeet environment.
+- [ ] Decide later whether this backend remains a branch, external helper, or documented plugin path.
+
 ## Milestone 3: Audio capture
 
-- [ ] Add cross-platform recorder interface.
-- [ ] Implement microphone recording to WAV.
-- [ ] Add `lkj once --seconds N`.
+- [x] Add cross-platform recorder interface.
+- [x] Implement command-backed microphone recording to WAV.
+- [x] Add `lkj once --seconds N`.
+- [x] Add recorder device config/CLI override.
 - [ ] Add device listing.
 - [ ] Add input level/diagnostics.
 

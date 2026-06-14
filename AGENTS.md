@@ -23,6 +23,15 @@ Important constraints:
 - `whisper.cpp` is the first target backend.
 - Frontend must stay separate from core pipeline.
 
+This branch is `parakeet-backend`. It intentionally explores optional Parakeet support outside `main`.
+
+Parakeet design boundary:
+
+- Go core stays dependency-free.
+- `whispercpp` remains the default backend.
+- `parakeet` calls an external helper command.
+- The included `scripts/parakeet_transcribe.py` helper requires Python, PyTorch, and NVIDIA NeMo, but only when selected.
+
 ## Current implementation
 
 Language: Go
@@ -37,9 +46,9 @@ Current files:
 
 ```text
 cmd/lkj             CLI
-internal/audio      audio source interface; existing WAV source; recorder stub
+internal/audio      audio source interface; existing WAV source; command recorder
 internal/config     JSON config loader
-internal/stt        Transcriber interface; whisper.cpp subprocess backend
+internal/stt        Transcriber interface; whisper.cpp + optional Parakeet subprocess backends
 internal/output     Sink interface; stdout/file/HTTP/clipboard-stub sinks
 internal/pipeline   source -> transcriber -> sink orchestration
 ```
@@ -56,7 +65,19 @@ bin/lkj once \
   --out stdout
 ```
 
-`once --seconds` exists as CLI shape but microphone recording is not implemented yet.
+`once --seconds` records microphone input through a local recorder command and passes the temporary WAV to the STT backend.
+
+Parakeet command shape on this branch:
+
+```bash
+bin/lkj once \
+  --backend parakeet \
+  --file sample.wav \
+  --parakeet-command "python3 scripts/parakeet_transcribe.py" \
+  --parakeet-model nvidia/parakeet-tdt-0.6b-v2 \
+  --parakeet-device cuda \
+  --out stdout
+```
 
 ## Verified commands
 
@@ -97,11 +118,11 @@ Some early issues (#2-#5) overlap with scaffold work and may need closing/updati
 
 Recommended next task:
 
-1. Implement microphone recording in Go.
-2. Make `lkj once --seconds N` work.
-3. Keep recorder behind `internal/audio.Source`.
-4. Add tests where practical.
-5. Update README examples after recording works.
+1. Smoke test `lkj once --seconds N --backend whispercpp` on real Linux audio hardware.
+2. Smoke test `lkj once --backend parakeet` inside a working NeMo/Parakeet Python environment.
+3. Add recorder device listing and improve recorder error messages.
+4. Improve `whisper.cpp` backend output parsing.
+5. Document installing/building whisper.cpp.
 
 Alternative next task:
 
