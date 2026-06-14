@@ -73,6 +73,9 @@ func cleanWhisperOutput(raw string) string {
 		if strings.HasPrefix(line, "whisper_") || strings.HasPrefix(line, "main:") {
 			continue
 		}
+		if strings.HasPrefix(line, "read_audio_data:") {
+			continue
+		}
 		kept = append(kept, line)
 	}
 	return strings.Join(kept, " ")

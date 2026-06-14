@@ -8,13 +8,14 @@ import (
 )
 
 type Config struct {
-	STTBackend string `json:"stt_backend"`
-	WhisperBin string `json:"whisper_bin"`
-	ModelPath  string `json:"model_path"`
-	Language   string `json:"language"`
-	Output     string `json:"output"`
-	HTTPURL    string `json:"http_url"`
-	FilePath   string `json:"file_path"`
+	STTBackend   string `json:"stt_backend"`
+	WhisperBin   string `json:"whisper_bin"`
+	ModelPath    string `json:"model_path"`
+	Language     string `json:"language"`
+	RecordDevice string `json:"record_device"`
+	Output       string `json:"output"`
+	HTTPURL      string `json:"http_url"`
+	FilePath     string `json:"file_path"`
 }
 
 func Default() Config {
