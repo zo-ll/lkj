@@ -10,21 +10,26 @@
 - [x] Add `whisper.cpp` subprocess backend.
 - [x] Add stdout/file/HTTP sinks.
 - [x] Add basic CLI.
-- [ ] Add tests for CLI/config/pipeline.
+- [x] Add tests for CLI/config/pipeline.
+- [x] Add `setup` command for local config.
+- [x] Add `doctor` dependency checks.
 
 ## Milestone 2: CPU-only whisper.cpp path
 
 - [ ] Document installing/building whisper.cpp.
-- [ ] Add model discovery/config helpers.
+- [x] Add model discovery/config helpers.
+- [x] Add tiny-model-first docs.
+- [x] Suppress common silence/music hallucinations.
 - [ ] Add model download helper or docs.
-- [ ] Improve transcript parsing from whisper.cpp output.
+- [ ] Improve broader transcript parsing from whisper.cpp output.
 - [ ] Support quiet JSON/text output modes if available.
 
 ## Milestone 3: Audio capture
 
-- [ ] Add cross-platform recorder interface.
-- [ ] Implement microphone recording to WAV.
-- [ ] Add `lkj once --seconds N`.
+- [x] Add cross-platform recorder interface.
+- [x] Implement command-backed microphone recording to WAV.
+- [x] Add `lkj once --seconds N`.
+- [x] Add recorder device config/CLI override.
 - [ ] Add device listing.
 - [ ] Add input level/diagnostics.
 

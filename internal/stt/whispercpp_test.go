@@ -8,3 +8,18 @@ func TestCleanWhisperOutputSkipsAudioLogs(t *testing.T) {
 		t.Fatalf("cleanWhisperOutput() = %q, want empty", got)
 	}
 }
+
+func TestCleanWhisperOutputSkipsSilenceHallucinations(t *testing.T) {
+	for _, raw := range []string{"(dramatic music)", "[Music]", "*applause*", "silence"} {
+		if got := cleanWhisperOutput(raw); got != "" {
+			t.Fatalf("cleanWhisperOutput(%q) = %q, want empty", raw, got)
+		}
+	}
+}
+
+func TestCleanWhisperOutputKeepsSpeech(t *testing.T) {
+	raw := "[00:00:00.000 --> 00:00:02.000] hello world"
+	if got := cleanWhisperOutput(raw); got != "hello world" {
+		t.Fatalf("cleanWhisperOutput() = %q, want hello world", got)
+	}
+}

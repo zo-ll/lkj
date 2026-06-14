@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // WhisperCPP calls whisper.cpp's CLI as a subprocess.
@@ -70,6 +71,9 @@ func cleanWhisperOutput(raw string) string {
 		if line == "" {
 			continue
 		}
+		if isLikelySilenceHallucination(line) {
+			continue
+		}
 		if strings.HasPrefix(line, "whisper_") || strings.HasPrefix(line, "main:") {
 			continue
 		}
@@ -79,4 +83,17 @@ func cleanWhisperOutput(raw string) string {
 		kept = append(kept, line)
 	}
 	return strings.Join(kept, " ")
+}
+
+func isLikelySilenceHallucination(text string) bool {
+	normalized := strings.TrimSpace(strings.ToLower(text))
+	normalized = strings.TrimFunc(normalized, func(r rune) bool {
+		return unicode.IsSpace(r) || r == '(' || r == ')' || r == '[' || r == ']' || r == '*' || r == '.' || r == '!' || r == '?'
+	})
+	switch normalized {
+	case "", "music", "dramatic music", "background music", "soft music", "silence", "background noise", "noise", "applause", "laughter", "laughs", "inaudible":
+		return true
+	default:
+		return false
+	}
 }

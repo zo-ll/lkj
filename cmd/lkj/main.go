@@ -6,6 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/zo-ll/lkj/internal/audio"
@@ -36,6 +39,8 @@ func run(args []string) error {
 		return nil
 	case "doctor":
 		return doctor(args[1:])
+	case "setup":
+		return setup(args[1:])
 	case "once":
 		return once(args[1:])
 	case "help", "-h", "--help":
@@ -51,7 +56,8 @@ func usage() {
 
 Usage:
   lkj version
-  lkj doctor [--config path]
+  lkj doctor [--config path] [--record-test seconds]
+  lkj setup [--config path]
   lkj once --file input.wav --model model.bin [options]
   lkj once --seconds 5 --model model.bin [options]
 
@@ -73,6 +79,7 @@ Options for once:
 func doctor(args []string) error {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	cfgPath := fs.String("config", "", "config file path")
+	recordTest := fs.Float64("record-test", 0, "record microphone test seconds")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -83,6 +90,53 @@ func doctor(args []string) error {
 	fmt.Println("lkj", version)
 	fmt.Println("config_path", valueOrDefault(*cfgPath, config.DefaultPath()))
 	fmt.Println("stt_backend", cfg.STTBackend)
+	fmt.Println("whisper_bin", cfg.WhisperBin)
+	fmt.Println("model_path", cfg.ModelPath)
+	fmt.Println("record_device", cfg.RecordDevice)
+	fmt.Println("output", cfg.Output)
+	fmt.Println()
+
+	issues := 0
+	issues += printCommandCheck("ffmpeg", "ffmpeg")
+	issues += printPathCheck("whisper_bin", cfg.WhisperBin, true)
+	issues += printPathCheck("model_path", cfg.ModelPath, false)
+	if strings.Contains(filepath.Base(cfg.ModelPath), "base.en") {
+		fmt.Println("warn model_memory base.en previously OOM-killed this machine; prefer ggml-tiny.en.bin")
+	}
+	if cfg.RecordDevice != "" {
+		issues += printDeviceCheck(cfg.RecordDevice)
+	} else {
+		fmt.Println("warn record_device not configured; run `lkj setup` or pass --device")
+	}
+	if *recordTest > 0 {
+		issues += printRecordCheck(*recordTest, cfg.RecordDevice)
+	}
+	if issues > 0 {
+		return fmt.Errorf("doctor found %d issue(s)", issues)
+	}
+	return nil
+}
+
+func setup(args []string) error {
+	fs := flag.NewFlagSet("setup", flag.ContinueOnError)
+	cfgPath := fs.String("config", "", "config file path")
+	whisperBin := fs.String("whisper-bin", discoverWhisperBin(), "whisper.cpp binary")
+	model := fs.String("model", discoverTinyModel(), "whisper.cpp model path")
+	device := fs.String("device", discoverRecordDevice(), "recorder input device")
+	out := fs.String("out", "stdout", "output sink")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	cfg := config.Default()
+	cfg.WhisperBin = *whisperBin
+	cfg.ModelPath = *model
+	cfg.RecordDevice = *device
+	cfg.Output = *out
+	path := valueOrDefault(*cfgPath, config.DefaultPath())
+	if err := config.Save(path, cfg); err != nil {
+		return err
+	}
+	fmt.Println("wrote", path)
 	fmt.Println("whisper_bin", cfg.WhisperBin)
 	fmt.Println("model_path", cfg.ModelPath)
 	fmt.Println("record_device", cfg.RecordDevice)
@@ -198,6 +252,128 @@ func buildSink(cfg config.Config) (output.Sink, error) {
 	default:
 		return nil, fmt.Errorf("unsupported output sink %q", cfg.Output)
 	}
+}
+
+func printCommandCheck(label, name string) int {
+	path, err := exec.LookPath(name)
+	if err != nil {
+		fmt.Println("fail", label, "not found on PATH")
+		return 1
+	}
+	fmt.Println("ok", label, path)
+	return 0
+}
+
+func printPathCheck(label, path string, executable bool) int {
+	if path == "" {
+		fmt.Println("fail", label, "not configured")
+		return 1
+	}
+	if executable && !strings.ContainsRune(path, os.PathSeparator) {
+		resolved, err := exec.LookPath(path)
+		if err != nil {
+			fmt.Println("fail", label, "not found on PATH:", path)
+			return 1
+		}
+		fmt.Println("ok", label, resolved)
+		return 0
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		fmt.Println("fail", label, err)
+		return 1
+	}
+	if info.IsDir() {
+		fmt.Println("fail", label, "is a directory")
+		return 1
+	}
+	if executable && info.Mode()&0o111 == 0 {
+		fmt.Println("fail", label, "is not executable")
+		return 1
+	}
+	fmt.Println("ok", label, path)
+	return 0
+}
+
+func printDeviceCheck(device string) int {
+	if _, err := exec.LookPath("pactl"); err != nil {
+		fmt.Println("warn record_device cannot verify without pactl")
+		return 0
+	}
+	out, err := exec.Command("pactl", "list", "short", "sources").Output()
+	if err != nil {
+		fmt.Println("warn record_device cannot list sources:", err)
+		return 0
+	}
+	if strings.Contains(string(out), device) {
+		fmt.Println("ok", "record_device", device)
+		return 0
+	}
+	fmt.Println("fail", "record_device", "not found:", device)
+	return 1
+}
+
+func printRecordCheck(seconds float64, device string) int {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(seconds*float64(time.Second))+10*time.Second)
+	defer cancel()
+	wav, err := (audio.Recorder{Seconds: seconds, Device: device}).WAV(ctx)
+	if err != nil {
+		fmt.Println("fail", "record_test", err)
+		return 1
+	}
+	defer os.Remove(wav)
+	fmt.Println("ok", "record_test", wav)
+	return 0
+}
+
+func discoverWhisperBin() string {
+	home, _ := os.UserHomeDir()
+	candidates := []string{
+		filepath.Join(home, "Projects", "vendor", "whisper.cpp", "build", "bin", "whisper-cli"),
+	}
+	if path, err := exec.LookPath("whisper-cli"); err == nil {
+		candidates = append([]string{path}, candidates...)
+	}
+	return firstExisting(candidates, true)
+}
+
+func discoverTinyModel() string {
+	home, _ := os.UserHomeDir()
+	return firstExisting([]string{
+		filepath.Join(home, "Projects", "vendor", "whisper.cpp", "models", "ggml-tiny.en.bin"),
+		filepath.Join(home, "Projects", "vendor", "whisper.cpp", "models", "ggml-tiny.bin"),
+	}, false)
+}
+
+func discoverRecordDevice() string {
+	if _, err := exec.LookPath("pactl"); err != nil {
+		return "default"
+	}
+	out, err := exec.Command("pactl", "list", "short", "sources").Output()
+	if err != nil {
+		return "default"
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && !strings.Contains(fields[1], ".monitor") {
+			return fields[1]
+		}
+	}
+	return "default"
+}
+
+func firstExisting(paths []string, executable bool) string {
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil || info.IsDir() {
+			continue
+		}
+		if executable && info.Mode()&0o111 == 0 {
+			continue
+		}
+		return path
+	}
+	return ""
 }
 
 func valueOrDefault(value, fallback string) string {

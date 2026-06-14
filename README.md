@@ -16,6 +16,7 @@ Designed as a standalone tool: agents can consume its transcripts over generic s
 - Go binary, no Python environment.
 - Local speech-to-text by default.
 - `whisper.cpp` backend first.
+- `ggml-tiny.en.bin` is the recommended first model on memory-constrained machines.
 - Protocol-first integration for any agent/tool/runtime.
 - CLI/daemon/server before GUI.
 - Cross-platform design.
@@ -29,17 +30,26 @@ Implemented now:
 - Config loader.
 - STT backend interface.
 - `whisper.cpp` subprocess backend.
+- Command-backed microphone recording with `ffmpeg`, `arecord`, or SoX `rec`.
 - Output sink interface.
 - stdout, file, and HTTP sinks.
 - Pipeline for `wav -> transcript -> sink`.
+- `setup` command for local config.
+- `doctor` checks for runtime dependencies.
+- Basic silence/music-caption suppression for Whisper hallucinations.
 
 Not implemented yet:
 
-- live microphone recording.
 - push-to-talk hotkeys.
 - clipboard sink.
 - generic agent adapters.
 - bundled whisper.cpp binaries/models.
+
+Microphone recording is implemented through local recorder commands. Prefer `ffmpeg` for cross-platform use, or install a platform fallback:
+
+- `ffmpeg` on Linux/macOS/Windows.
+- `arecord` on Linux.
+- `rec` from SoX.
 
 ## Quick start
 
@@ -54,9 +64,33 @@ Transcribe an existing WAV with `whisper.cpp`:
 ```bash
 bin/lkj once \
   --file sample.wav \
-  --model /path/to/ggml-base.en.bin \
+  --model /path/to/ggml-tiny.en.bin \
   --whisper-bin /path/to/whisper-cli \
   --out stdout
+```
+
+Write a local config using discovered paths:
+
+```bash
+bin/lkj setup
+```
+
+Check dependencies and config:
+
+```bash
+bin/lkj doctor
+```
+
+Optionally test microphone capture during doctor:
+
+```bash
+bin/lkj doctor --record-test 2
+```
+
+Record microphone audio first, then transcribe it:
+
+```bash
+bin/lkj once --seconds 5
 ```
 
 Send transcript to an agent HTTP endpoint:
@@ -64,7 +98,7 @@ Send transcript to an agent HTTP endpoint:
 ```bash
 bin/lkj once \
   --file sample.wav \
-  --model /path/to/ggml-base.en.bin \
+  --model /path/to/ggml-tiny.en.bin \
   --out http \
   --url http://localhost:8765/input
 ```
@@ -80,10 +114,12 @@ HTTP body:
 ```bash
 lkj version
 lkj once --file input.wav --model model.bin --out stdout
+lkj once --seconds 5
+lkj setup
 lkj doctor
 ```
 
-`once --seconds` is reserved for upcoming microphone recording.
+`once --seconds` records microphone audio to a temporary WAV before transcription.
 
 ## Config
 
@@ -99,7 +135,8 @@ Example:
 {
   "stt_backend": "whispercpp",
   "whisper_bin": "whisper-cli",
-  "model_path": "models/ggml-base.en.bin",
+  "model_path": "models/ggml-tiny.en.bin",
+  "record_device": "default",
   "output": "stdout",
   "http_url": "http://localhost:8765/input"
 }

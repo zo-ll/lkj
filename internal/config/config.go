@@ -50,3 +50,18 @@ func Load(path string) (Config, error) {
 	}
 	return cfg, nil
 }
+
+func Save(path string, cfg Config) error {
+	if path == "" {
+		path = DefaultPath()
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	return os.WriteFile(path, data, 0o644)
+}
