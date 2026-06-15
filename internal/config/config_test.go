@@ -21,6 +21,7 @@ func TestSaveAndLoad(t *testing.T) {
 		STTBackend:   "whispercpp",
 		WhisperBin:   "/tmp/whisper-cli",
 		ModelPath:    "/tmp/ggml-tiny.en.bin",
+		Threads:      2,
 		RecordDevice: "default",
 		Output:       "stdout",
 	}

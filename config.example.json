@@ -2,6 +2,7 @@
   "stt_backend": "whispercpp",
   "whisper_bin": "whisper-cli",
   "model_path": "models/ggml-tiny.en.bin",
+  "threads": 2,
   "record_device": "default",
   "output": "stdout",
   "http_url": "http://localhost:8765/input"

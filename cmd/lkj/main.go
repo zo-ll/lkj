@@ -70,6 +70,7 @@ Options for once:
   --whisper-bin path   whisper.cpp CLI binary
   --model path         whisper.cpp ggml model path
   --language code      optional language code
+  --threads n          whisper.cpp worker threads
   --out name           output sink: stdout, http, file, clipboard
   --url url            HTTP sink URL
   --file-out path      file sink path
@@ -92,6 +93,7 @@ func doctor(args []string) error {
 	fmt.Println("stt_backend", cfg.STTBackend)
 	fmt.Println("whisper_bin", cfg.WhisperBin)
 	fmt.Println("model_path", cfg.ModelPath)
+	fmt.Println("threads", cfg.Threads)
 	fmt.Println("record_device", cfg.RecordDevice)
 	fmt.Println("output", cfg.Output)
 	fmt.Println()
@@ -122,6 +124,7 @@ func setup(args []string) error {
 	cfgPath := fs.String("config", "", "config file path")
 	whisperBin := fs.String("whisper-bin", discoverWhisperBin(), "whisper.cpp binary")
 	model := fs.String("model", discoverTinyModel(), "whisper.cpp model path")
+	threads := fs.Int("threads", 0, "whisper.cpp worker threads")
 	device := fs.String("device", discoverRecordDevice(), "recorder input device")
 	out := fs.String("out", "stdout", "output sink")
 	if err := fs.Parse(args); err != nil {
@@ -130,6 +133,7 @@ func setup(args []string) error {
 	cfg := config.Default()
 	cfg.WhisperBin = *whisperBin
 	cfg.ModelPath = *model
+	cfg.Threads = *threads
 	cfg.RecordDevice = *device
 	cfg.Output = *out
 	path := valueOrDefault(*cfgPath, config.DefaultPath())
@@ -139,6 +143,7 @@ func setup(args []string) error {
 	fmt.Println("wrote", path)
 	fmt.Println("whisper_bin", cfg.WhisperBin)
 	fmt.Println("model_path", cfg.ModelPath)
+	fmt.Println("threads", cfg.Threads)
 	fmt.Println("record_device", cfg.RecordDevice)
 	fmt.Println("output", cfg.Output)
 	return nil
@@ -154,6 +159,7 @@ func once(args []string) error {
 	whisperBin := fs.String("whisper-bin", "", "whisper.cpp binary")
 	model := fs.String("model", "", "model path")
 	language := fs.String("language", "", "language code")
+	threads := fs.Int("threads", 0, "whisper.cpp worker threads")
 	out := fs.String("out", "", "output sink")
 	url := fs.String("url", "", "http output url")
 	fileOut := fs.String("file-out", "", "file output path")
@@ -165,7 +171,7 @@ func once(args []string) error {
 	if err != nil {
 		return err
 	}
-	applyOverrides(&cfg, *backend, *whisperBin, *model, *language, *device, *out, *url, *fileOut)
+	applyOverrides(&cfg, *backend, *whisperBin, *model, *language, *threads, *device, *out, *url, *fileOut)
 
 	source, err := buildSource(*inputFile, *seconds, cfg.RecordDevice)
 	if err != nil {
@@ -187,7 +193,7 @@ func once(args []string) error {
 	return err
 }
 
-func applyOverrides(cfg *config.Config, backend, whisperBin, model, language, device, out, url, fileOut string) {
+func applyOverrides(cfg *config.Config, backend, whisperBin, model, language string, threads int, device, out, url, fileOut string) {
 	if backend != "" {
 		cfg.STTBackend = backend
 	}
@@ -199,6 +205,9 @@ func applyOverrides(cfg *config.Config, backend, whisperBin, model, language, de
 	}
 	if language != "" {
 		cfg.Language = language
+	}
+	if threads > 0 {
+		cfg.Threads = threads
 	}
 	if device != "" {
 		cfg.RecordDevice = device
@@ -227,7 +236,7 @@ func buildSource(inputFile string, seconds float64, device string) (audio.Source
 func buildTranscriber(cfg config.Config) (stt.Transcriber, error) {
 	switch cfg.STTBackend {
 	case "", "whispercpp":
-		return stt.WhisperCPP{Bin: cfg.WhisperBin, ModelPath: cfg.ModelPath, Language: cfg.Language}, nil
+		return stt.WhisperCPP{Bin: cfg.WhisperBin, ModelPath: cfg.ModelPath, Language: cfg.Language, Threads: cfg.Threads}, nil
 	default:
 		return nil, fmt.Errorf("unsupported stt backend %q", cfg.STTBackend)
 	}

@@ -12,6 +12,7 @@ type Config struct {
 	WhisperBin   string `json:"whisper_bin"`
 	ModelPath    string `json:"model_path"`
 	Language     string `json:"language"`
+	Threads      int    `json:"threads"`
 	RecordDevice string `json:"record_device"`
 	Output       string `json:"output"`
 	HTTPURL      string `json:"http_url"`

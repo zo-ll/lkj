@@ -59,6 +59,33 @@ Build:
 go build -o bin/lkj ./cmd/lkj
 ```
 
+Install for the current user:
+
+```bash
+make install
+```
+
+This installs `lkj` to `~/.local/bin/lkj` by default. Make sure `~/.local/bin` is on `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+lkj version
+```
+
+Use a custom install directory:
+
+```bash
+LKJ_INSTALL_DIR=/custom/bin make install
+```
+
+Uninstall:
+
+```bash
+make uninstall
+```
+
+Update by pulling the repo and running `make install` again.
+
 Transcribe an existing WAV with `whisper.cpp`:
 
 ```bash
@@ -66,6 +93,7 @@ bin/lkj once \
   --file sample.wav \
   --model /path/to/ggml-tiny.en.bin \
   --whisper-bin /path/to/whisper-cli \
+  --threads 2 \
   --out stdout
 ```
 
@@ -136,6 +164,7 @@ Example:
   "stt_backend": "whispercpp",
   "whisper_bin": "whisper-cli",
   "model_path": "models/ggml-tiny.en.bin",
+  "threads": 2,
   "record_device": "default",
   "output": "stdout",
   "http_url": "http://localhost:8765/input"
@@ -143,6 +172,8 @@ Example:
 ```
 
 CLI flags override config.
+
+Use `threads` / `--threads` to limit `whisper.cpp` CPU usage on constrained machines. Start with `ggml-tiny.en.bin` and a low thread count like `2`. Larger models such as `base.en` may be too heavy on memory-constrained systems.
 
 ## Architecture
 

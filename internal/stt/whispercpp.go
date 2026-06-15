@@ -16,6 +16,7 @@ type WhisperCPP struct {
 	Bin       string
 	ModelPath string
 	Language  string
+	Threads   int
 	ExtraArgs []string
 }
 
@@ -30,13 +31,7 @@ func (w WhisperCPP) Transcribe(ctx context.Context, wavPath string) (string, err
 		return "", errors.New("wav path is empty")
 	}
 
-	args := []string{"-m", w.ModelPath, "-f", wavPath, "-nt", "-np"}
-	if w.Language != "" {
-		args = append(args, "-l", w.Language)
-	}
-	args = append(args, w.ExtraArgs...)
-
-	cmd := exec.CommandContext(ctx, w.Bin, args...)
+	cmd := exec.CommandContext(ctx, w.Bin, w.args(wavPath)...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -54,6 +49,18 @@ func (w WhisperCPP) Transcribe(ctx context.Context, wavPath string) (string, err
 		text = cleanWhisperOutput(stderr.String())
 	}
 	return text, nil
+}
+
+func (w WhisperCPP) args(wavPath string) []string {
+	args := []string{"-m", w.ModelPath, "-f", wavPath, "-nt", "-np"}
+	if w.Language != "" {
+		args = append(args, "-l", w.Language)
+	}
+	if w.Threads > 0 {
+		args = append(args, "-t", fmt.Sprintf("%d", w.Threads))
+	}
+	args = append(args, w.ExtraArgs...)
+	return args
 }
 
 var timestampLine = regexp.MustCompile(`(?m)^\s*\[[^\]]+\]\s*`)
