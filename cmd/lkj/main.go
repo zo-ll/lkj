@@ -13,6 +13,7 @@ import (
 
 	"github.com/zo-ll/lkj/internal/audio"
 	"github.com/zo-ll/lkj/internal/config"
+	"github.com/zo-ll/lkj/internal/desktop"
 	"github.com/zo-ll/lkj/internal/output"
 	"github.com/zo-ll/lkj/internal/pipeline"
 	"github.com/zo-ll/lkj/internal/stt"
@@ -41,6 +42,8 @@ func run(args []string) error {
 		return doctor(args[1:])
 	case "setup":
 		return setup(args[1:])
+	case "platform":
+		return platform(args[1:])
 	case "once":
 		return once(args[1:])
 	case "help", "-h", "--help":
@@ -58,6 +61,7 @@ Usage:
   lkj version
   lkj doctor [--config path] [--record-test seconds]
   lkj setup [--config path]
+  lkj platform
   lkj once --file input.wav --model model.bin [options]
   lkj once --seconds 5 --model model.bin [options]
 
@@ -116,6 +120,23 @@ func doctor(args []string) error {
 	if issues > 0 {
 		return fmt.Errorf("doctor found %d issue(s)", issues)
 	}
+	return nil
+}
+
+func platform(args []string) error {
+	fs := flag.NewFlagSet("platform", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	backend := desktop.New()
+	caps := backend.Capabilities()
+	fmt.Println("platform", backend.Name())
+	fmt.Println("clipboard", caps.Clipboard)
+	fmt.Println("type_text", caps.TypeText)
+	fmt.Println("global_hotkey", caps.GlobalHotkey)
+	fmt.Println("notifications", caps.Notifications)
+	fmt.Println("tray", caps.Tray)
+	fmt.Println("microphone_setup", caps.MicrophoneSetup)
 	return nil
 }
 

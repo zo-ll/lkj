@@ -109,6 +109,12 @@ Check dependencies and config:
 bin/lkj doctor
 ```
 
+Inspect platform desktop backend capabilities:
+
+```bash
+bin/lkj platform
+```
+
 Optionally test microphone capture during doctor:
 
 ```bash
@@ -145,6 +151,7 @@ lkj once --file input.wav --model model.bin --out stdout
 lkj once --seconds 5
 lkj setup
 lkj doctor
+lkj platform
 ```
 
 `once --seconds` records microphone audio to a temporary WAV before transcription.
@@ -183,6 +190,7 @@ internal/config     JSON config
 internal/audio      recorder interface and wav source
 internal/stt        transcriber interface + whisper.cpp backend
 internal/output     sinks: stdout/file/http/clipboard later
+internal/desktop    platform desktop integration backends
 internal/pipeline   orchestration
 ```
 
@@ -203,3 +211,5 @@ type Sink interface {
 See [ROADMAP.md](ROADMAP.md).
 
 Frontend/UX notes live in [docs/frontend.md](docs/frontend.md).
+
+macOS backend notes live in [docs/macos.md](docs/macos.md).
