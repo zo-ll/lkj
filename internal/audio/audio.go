@@ -17,6 +17,13 @@ type Source interface {
 	WAV(ctx context.Context) (string, error)
 }
 
+// TemporarySource owns the WAV it produces. The pipeline removes the file
+// after every run, including transcription and sink failures.
+type TemporarySource interface {
+	Source
+	RemoveWAV(path string) error
+}
+
 type ExistingWAV struct {
 	Path string
 }
@@ -36,6 +43,10 @@ func (e ExistingWAV) WAV(ctx context.Context) (string, error) {
 type Recorder struct {
 	Seconds float64
 	Device  string
+}
+
+func (Recorder) RemoveWAV(path string) error {
+	return os.Remove(path)
 }
 
 func (r Recorder) WAV(ctx context.Context) (string, error) {

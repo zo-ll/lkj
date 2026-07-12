@@ -20,6 +20,9 @@ func (p Pipeline) Run(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if temporary, ok := p.Source.(audio.TemporarySource); ok {
+		defer temporary.RemoveWAV(wavPath)
+	}
 
 	text, err := p.Transcriber.Transcribe(ctx, wavPath)
 	if err != nil {
