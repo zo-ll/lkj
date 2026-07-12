@@ -158,10 +158,13 @@ are written to `~/.cache/lkj/daemon.log`. The control socket defaults to
 
 On KDE Plasma:
 
-1. Open **System Settings → Keyboard → Shortcuts**.
-2. Add a new command/application shortcut.
-3. Set its command to `/home/az/.local/bin/lkj toggle`.
-4. Assign `Ctrl+Alt+B`.
+```bash
+make install-shortcut
+```
+
+This installs a KDE application shortcut for `Ctrl+Alt+B`. You can inspect or
+change it under **System Settings → Keyboard → Shortcuts**. The equivalent
+manual shortcut command is `/home/az/.local/bin/lkj toggle`.
 
 Start the daemon once after login with `lkj start`, press the shortcut, speak,
 and press it again. Notifications show each state change. When the completion

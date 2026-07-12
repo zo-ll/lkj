@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Toggle lkj Voice Recording
+Comment=Start or stop lkj voice recording
+Exec=lkj toggle
+Icon=audio-input-microphone
+Terminal=false
+Categories=Utility;Accessibility;
+X-KDE-Shortcuts=Ctrl+Alt+B
