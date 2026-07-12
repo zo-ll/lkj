@@ -71,7 +71,7 @@ Options for once:
   --model path         whisper.cpp ggml model path
   --language code      optional language code
   --threads n          whisper.cpp worker threads
-  --out name           output sink: stdout, http, file, clipboard
+  --out name           output sink: stdout, type, http, file, clipboard
   --url url            HTTP sink URL
   --file-out path      file sink path
 `)
@@ -256,6 +256,8 @@ func buildSink(cfg config.Config) (output.Sink, error) {
 			return nil, errors.New("file output requires --file-out or file_path config")
 		}
 		return output.File{Path: cfg.FilePath}, nil
+	case "type":
+		return output.Type{}, nil
 	case "clipboard":
 		return output.Clipboard{}, nil
 	default:
