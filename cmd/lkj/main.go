@@ -243,6 +243,11 @@ func doctor(args []string) error {
 	issues += printCommandCheck("ffmpeg", "ffmpeg")
 	issues += printPathCheck("whisper_bin", cfg.WhisperBin, true)
 	issues += printPathCheck("model_path", cfg.ModelPath, false)
+	if err := output.CheckType(); err != nil {
+		fmt.Println("warn", "typing_output", err)
+	} else {
+		fmt.Println("ok", "typing_output")
+	}
 	if strings.Contains(filepath.Base(cfg.ModelPath), "base.en") {
 		fmt.Println("warn model_memory base.en previously OOM-killed this machine; prefer ggml-tiny.en.bin")
 	}

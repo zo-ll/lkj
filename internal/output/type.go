@@ -13,13 +13,19 @@ import (
 type Type struct{}
 
 func (Type) Send(ctx context.Context, value string) error {
+	var nativeErr error
 	if runtime.GOOS == "linux" {
 		if err := typeLinux(ctx, value); err == nil {
 			return nil
+		} else {
+			nativeErr = err
 		}
 	}
 	command, err := typingCommand(runtime.GOOS, os.Getenv("WAYLAND_DISPLAY") != "", exec.LookPath, value)
 	if err != nil {
+		if nativeErr != nil {
+			return fmt.Errorf("Linux virtual keyboard unavailable (%v); %w", nativeErr, err)
+		}
 		return err
 	}
 	cmd := exec.CommandContext(ctx, command.name, command.args...)
@@ -27,6 +33,19 @@ func (Type) Send(ctx context.Context, value string) error {
 		return fmt.Errorf("type transcript with %s: %w: %s", command.name, err, output)
 	}
 	return nil
+}
+
+// CheckType reports whether active-window typing is available without sending
+// any keyboard input.
+func CheckType() error {
+	if runtime.GOOS == "linux" {
+		device, err := os.OpenFile("/dev/uinput", os.O_WRONLY, 0)
+		if err == nil {
+			return device.Close()
+		}
+	}
+	_, err := typingCommand(runtime.GOOS, os.Getenv("WAYLAND_DISPLAY") != "", exec.LookPath, "")
+	return err
 }
 
 type typeCommand struct {
