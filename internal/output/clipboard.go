@@ -17,10 +17,20 @@ func (Clipboard) Send(ctx context.Context, text string) error {
 	if err != nil {
 		return err
 	}
+	return runClipboard(ctx, command, text)
+}
+
+func runClipboard(ctx context.Context, command clipboardCmd, text string) error {
 	cmd := exec.CommandContext(ctx, command.name, command.args...)
 	cmd.Stdin = strings.NewReader(text)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("copy transcript with %s: %w: %s", command.name, err, output)
+	// Clipboard owners such as wl-copy and xclip fork a child that stays alive
+	// while it owns the selection. Leaving os/exec capture pipes attached to
+	// that child makes Wait block until the clipboard changes, which leaves the
+	// daemon stuck in its transcribing state after the first utterance.
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("copy transcript with %s: %w", command.name, err)
 	}
 	return nil
 }
