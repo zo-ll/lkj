@@ -248,6 +248,11 @@ func doctor(args []string) error {
 	} else {
 		fmt.Println("ok", "typing_output")
 	}
+	if err := output.CheckClipboard(); err != nil {
+		fmt.Println("warn", "clipboard_output", err)
+	} else {
+		fmt.Println("ok", "clipboard_output")
+	}
 	if strings.Contains(filepath.Base(cfg.ModelPath), "base.en") {
 		fmt.Println("warn model_memory base.en previously OOM-killed this machine; prefer ggml-tiny.en.bin")
 	}
