@@ -67,3 +67,14 @@ func TestRecorderForToolRecRejectsDevice(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestRecorderForToolFFmpegWithoutDuration(t *testing.T) {
+	rec, err := recorderForTool("linux", "ffmpeg", "/tmp/in.wav", 0, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := recorderCommand{Name: "ffmpeg", Args: []string{"-hide_banner", "-loglevel", "error", "-y", "-f", "pulse", "-i", "default", "-ar", "16000", "-ac", "1", "/tmp/in.wav"}}
+	if !reflect.DeepEqual(rec, want) {
+		t.Fatalf("recorder command = %#v, want %#v", rec, want)
+	}
+}

@@ -130,14 +130,21 @@ func recorderForTool(goos, tool, wavPath string, seconds float64, device string)
 		default:
 			return recorderCommand{}, fmt.Errorf("ffmpeg recorder is not configured for %s", goos)
 		}
-		args = append(args, "-t", secondsText, "-ar", "16000", "-ac", "1", wavPath)
+		if seconds > 0 {
+			args = append(args, "-t", secondsText)
+		}
+		args = append(args, "-ar", "16000", "-ac", "1", wavPath)
 		return recorderCommand{Name: tool, Args: args}, nil
 	case "arecord":
 		if goos != "linux" {
 			return recorderCommand{}, errors.New("arecord recorder is only supported on linux")
 		}
-		duration := strconv.Itoa(int(math.Ceil(seconds)))
-		args := []string{"-q", "-d", duration, "-f", "S16_LE", "-r", "16000", "-c", "1"}
+		args := []string{"-q"}
+		if seconds > 0 {
+			duration := strconv.Itoa(int(math.Ceil(seconds)))
+			args = append(args, "-d", duration)
+		}
+		args = append(args, "-f", "S16_LE", "-r", "16000", "-c", "1")
 		if device != "" {
 			args = append(args, "-D", device)
 		}
@@ -147,7 +154,11 @@ func recorderForTool(goos, tool, wavPath string, seconds float64, device string)
 		if device != "" {
 			return recorderCommand{}, errors.New("rec recorder does not support record_device; use ffmpeg or arecord")
 		}
-		return recorderCommand{Name: tool, Args: []string{"-q", "-r", "16000", "-c", "1", "-b", "16", wavPath, "trim", "0", secondsText}}, nil
+		args := []string{"-q", "-r", "16000", "-c", "1", "-b", "16", wavPath}
+		if seconds > 0 {
+			args = append(args, "trim", "0", secondsText)
+		}
+		return recorderCommand{Name: tool, Args: args}, nil
 	default:
 		return recorderCommand{}, fmt.Errorf("unsupported recorder %q", tool)
 	}
