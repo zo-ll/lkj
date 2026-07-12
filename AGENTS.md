@@ -37,11 +37,12 @@ Current files:
 
 ```text
 cmd/lkj             CLI
-internal/audio      audio source interface; existing WAV source; recorder stub
+internal/audio      audio source interface; existing WAV and command-backed recorders
 internal/config     JSON config loader
 internal/stt        Transcriber interface; whisper.cpp subprocess backend
 internal/output     Sink interface; stdout/file/HTTP/clipboard-stub sinks
 internal/pipeline   source -> transcriber -> sink orchestration
+internal/daemon     local socket daemon and toggle state machine
 ```
 
 Working command shape:
@@ -56,7 +57,8 @@ bin/lkj once \
   --out stdout
 ```
 
-`once --seconds` exists as CLI shape but microphone recording is not implemented yet.
+`once --seconds` records through ffmpeg, arecord, or SoX. `start` launches the
+background daemon; `toggle` starts/stops an utterance and routes its transcript.
 
 ## Verified commands
 
@@ -97,11 +99,10 @@ Some early issues (#2-#5) overlap with scaffold work and may need closing/updati
 
 Recommended next task:
 
-1. Implement microphone recording in Go.
-2. Make `lkj once --seconds N` work.
-3. Keep recorder behind `internal/audio.Source`.
-4. Add tests where practical.
-5. Update README examples after recording works.
+1. Improve device listing and input diagnostics.
+2. Add keyboard-layout-aware active typing.
+3. Improve whisper.cpp structured output parsing.
+4. Add tests for CLI error and setup paths.
 
 Alternative next task:
 

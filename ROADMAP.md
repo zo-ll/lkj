@@ -43,10 +43,11 @@
 
 ## Milestone 5: Daemon/listen mode
 
-- [ ] Add `lkj listen` loop.
-- [ ] Add push-to-talk abstraction.
-- [ ] Add hold-to-talk and toggle-to-talk modes.
-- [ ] Add cancel-current-recording action.
+- [x] Add `lkj listen` daemon.
+- [x] Add local daemon control protocol.
+- [ ] Add hold-to-talk abstraction.
+- [x] Add toggle-to-talk mode.
+- [x] Add cancel-current-recording action.
 - [ ] Add platform-specific hotkey providers later.
 - [ ] Add `lkj serve` local API.
 
@@ -70,7 +71,8 @@ See [docs/frontend.md](docs/frontend.md).
 
 ## Later
 
-- Clipboard and type-into-active-app sinks.
+- Clipboard sink.
+- Improve type-into-active-app keyboard layout support.
 - Tray/desktop wrapper.
 - Bundled whisper.cpp binaries.
 - Optional GPU acceleration.

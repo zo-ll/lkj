@@ -37,6 +37,8 @@ Implemented now:
 - `setup` command for local config.
 - `doctor` checks for runtime dependencies.
 - Basic silence/music-caption suppression for Whisper hallucinations.
+- Background daemon with local `toggle`, `cancel`, `status`, and `stop` controls.
+- Active-window typing on Linux through `/dev/uinput`, with no added library dependency.
 
 Not implemented yet:
 
@@ -121,6 +123,54 @@ Record microphone audio first, then transcribe it:
 bin/lkj once --seconds 5
 ```
 
+## Voice input daemon
+
+Start `lkj` in the background. The daemon records from the configured device,
+transcribes locally, and types the result into the focused application:
+
+```bash
+lkj start
+lkj status
+```
+
+Toggle once to start recording and again to stop, transcribe, and type:
+
+```bash
+lkj toggle
+# speak
+lkj toggle
+```
+
+Cancel the current recording without transcribing, or stop the daemon:
+
+```bash
+lkj cancel
+lkj stop
+```
+
+`lkj listen` runs the same service in the foreground for debugging. Daemon logs
+are written to `~/.cache/lkj/daemon.log`. The control socket defaults to
+`$XDG_RUNTIME_DIR/lkj.sock`; override it with `--socket` or `LKJ_SOCKET`.
+
+### Bind a global toggle shortcut
+
+On KDE Plasma:
+
+1. Open **System Settings → Keyboard → Shortcuts**.
+2. Add a new command/application shortcut.
+3. Set its command to the absolute installed path, normally
+   `~/.local/bin/lkj toggle`.
+4. Assign the key you want, such as `Meta+Space`.
+
+Start the daemon once after login with `lkj start`, focus any text field, press
+the shortcut, speak, and press it again. The transcript is inserted but not
+submitted, so you can review it before pressing Enter.
+
+On Linux, active typing uses the kernel virtual-input device directly and adds
+no package dependency. `lkj doctor` reports whether `/dev/uinput` is writable.
+The current key mapping follows a US keyboard layout; non-ASCII text uses the
+standard Linux Unicode-entry sequence where the focused toolkit supports it.
+
 Send transcript to an agent HTTP endpoint:
 
 ```bash
@@ -143,6 +193,12 @@ HTTP body:
 lkj version
 lkj once --file input.wav --model model.bin --out stdout
 lkj once --seconds 5
+lkj start
+lkj toggle
+lkj status
+lkj cancel
+lkj stop
+lkj listen
 lkj setup
 lkj doctor
 ```
