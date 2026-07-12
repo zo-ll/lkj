@@ -48,6 +48,7 @@
 - [ ] Add hold-to-talk abstraction.
 - [x] Add toggle-to-talk mode.
 - [x] Add cancel-current-recording action.
+- [x] Add desktop state notifications.
 - [ ] Add platform-specific hotkey providers later.
 - [ ] Add `lkj serve` local API.
 
@@ -71,7 +72,7 @@ See [docs/frontend.md](docs/frontend.md).
 
 ## Later
 
-- Clipboard sink.
+- [x] Clipboard sink.
 - Improve type-into-active-app keyboard layout support.
 - Tray/desktop wrapper.
 - Bundled whisper.cpp binaries.

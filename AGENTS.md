@@ -40,7 +40,7 @@ cmd/lkj             CLI
 internal/audio      audio source interface; existing WAV and command-backed recorders
 internal/config     JSON config loader
 internal/stt        Transcriber interface; whisper.cpp subprocess backend
-internal/output     Sink interface; stdout/file/HTTP/clipboard-stub sinks
+internal/output     Sink interface; stdout/file/HTTP/clipboard/type sinks and notifications
 internal/pipeline   source -> transcriber -> sink orchestration
 internal/daemon     local socket daemon and toggle state machine
 ```

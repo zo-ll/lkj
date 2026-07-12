@@ -38,7 +38,9 @@ Implemented now:
 - `doctor` checks for runtime dependencies.
 - Basic silence/music-caption suppression for Whisper hallucinations.
 - Background daemon with local `toggle`, `cancel`, `status`, and `stop` controls.
-- Active-window typing on Linux through `/dev/uinput`, with no added library dependency.
+- Clipboard output on Linux, macOS, and Windows.
+- Desktop notifications for recording, transcription, clipboard delivery, and errors.
+- Optional active-window typing on Linux through `/dev/uinput`.
 
 Not implemented yet:
 
@@ -126,14 +128,14 @@ bin/lkj once --seconds 5
 ## Voice input daemon
 
 Start `lkj` in the background. The daemon records from the configured device,
-transcribes locally, and types the result into the focused application:
+transcribes locally, and copies the result to the clipboard:
 
 ```bash
 lkj start
 lkj status
 ```
 
-Toggle once to start recording and again to stop, transcribe, and type:
+Toggle once to start recording and again to stop, transcribe, and copy:
 
 ```bash
 lkj toggle
@@ -158,15 +160,17 @@ On KDE Plasma:
 
 1. Open **System Settings → Keyboard → Shortcuts**.
 2. Add a new command/application shortcut.
-3. Set its command to the absolute installed path, normally
-   `~/.local/bin/lkj toggle`.
-4. Assign the key you want, such as `Meta+Space`.
+3. Set its command to `/home/az/.local/bin/lkj toggle`.
+4. Assign `Ctrl+Alt+B`.
 
-Start the daemon once after login with `lkj start`, focus any text field, press
-the shortcut, speak, and press it again. The transcript is inserted but not
-submitted, so you can review it before pressing Enter.
+Start the daemon once after login with `lkj start`, press the shortcut, speak,
+and press it again. Notifications show each state change. When the completion
+notification appears, paste the transcript anywhere with `Ctrl+V`.
 
-On Linux, active typing uses the kernel virtual-input device directly and adds
+Clipboard is the daemon default. To restore direct active-window typing, start
+it with `lkj start --out type`.
+
+On Linux, optional active typing uses the kernel virtual-input device directly and adds
 no package dependency. `lkj doctor` reports whether `/dev/uinput` is writable.
 The current key mapping follows a US keyboard layout; non-ASCII text uses the
 standard Linux Unicode-entry sequence where the focused toolkit supports it.
