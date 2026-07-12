@@ -24,6 +24,7 @@ type Recording interface {
 }
 
 type StartRecording func(context.Context, string) (Recording, error)
+type Notify func(summary, body string)
 
 type Response struct {
 	State   string `json:"state"`
@@ -38,6 +39,7 @@ type Server struct {
 	Transcriber    stt.Transcriber
 	Sink           output.Sink
 	StartRecording StartRecording
+	Notify         Notify
 
 	mu       sync.Mutex
 	state    string
@@ -91,6 +93,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	ctx, s.cancel = context.WithCancel(ctx)
 	s.listener = listener
 	s.state = "idle"
+	s.notify("lkj ready", "Press your toggle shortcut to start recording")
 	go func() {
 		<-ctx.Done()
 		listener.Close()
@@ -126,6 +129,7 @@ func (s *Server) handle(ctx context.Context, conn net.Conn) {
 		response = Response{State: s.currentState()}
 	case "stop":
 		response = Response{State: "stopping", Message: "daemon stopping"}
+		s.notify("lkj stopped", "Voice recording daemon stopped")
 		defer s.cancel()
 	case "cancel":
 		response = s.cancelRecording()
@@ -142,17 +146,20 @@ func (s *Server) toggle(ctx context.Context) Response {
 		session, err := s.StartRecording(ctx, s.Device)
 		if err != nil {
 			s.mu.Unlock()
+			s.notify("lkj error", err.Error())
 			return Response{State: "idle", Error: err.Error()}
 		}
 		s.session = session
 		s.state = "recording"
 		s.mu.Unlock()
+		s.notify("Recording", "Press the toggle shortcut again to stop")
 		return Response{State: "recording", Message: "recording started"}
 	case "recording":
 		session := s.session
 		s.session = nil
 		s.state = "transcribing"
 		s.mu.Unlock()
+		s.notify("Transcribing", "Converting speech to text")
 		return s.finish(ctx, session)
 	default:
 		state := s.state
@@ -167,6 +174,7 @@ func (s *Server) finish(ctx context.Context, session Recording) Response {
 	cancel()
 	if err != nil {
 		s.setIdle()
+		s.notify("lkj error", err.Error())
 		return Response{State: "idle", Error: err.Error()}
 	}
 	defer os.Remove(path)
@@ -179,11 +187,14 @@ func (s *Server) finish(ctx context.Context, session Recording) Response {
 	}
 	s.setIdle()
 	if err != nil {
+		s.notify("lkj error", err.Error())
 		return Response{State: "idle", Error: err.Error()}
 	}
 	if text == "" {
+		s.notify("No speech detected", "Clipboard was not changed")
 		return Response{State: "idle", Message: "no speech detected"}
 	}
+	s.notify("Copied to clipboard", "Your transcript is ready to paste")
 	return Response{State: "idle", Message: "transcript delivered", Text: text}
 }
 
@@ -199,7 +210,14 @@ func (s *Server) cancelRecording() Response {
 	s.state = "idle"
 	s.mu.Unlock()
 	session.Cancel()
+	s.notify("Recording cancelled", "Clipboard was not changed")
 	return Response{State: "idle", Message: "recording cancelled"}
+}
+
+func (s *Server) notify(summary, body string) {
+	if s.Notify != nil {
+		s.Notify(summary, body)
+	}
 }
 
 func (s *Server) setIdle() {

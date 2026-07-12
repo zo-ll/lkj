@@ -32,6 +32,7 @@ func TestServerToggleFlow(t *testing.T) {
 	}
 	socket := filepath.Join(dir, "lkj.sock")
 	delivered := make(chan string, 1)
+	notifications := make(chan string, 8)
 	server := &Server{
 		Socket:      socket,
 		Transcriber: fakeTranscriber{text: "hello computer"},
@@ -39,6 +40,7 @@ func TestServerToggleFlow(t *testing.T) {
 		StartRecording: func(context.Context, string) (Recording, error) {
 			return &fakeRecording{path: wav}, nil
 		},
+		Notify: func(summary, _ string) { notifications <- summary },
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -51,6 +53,9 @@ func TestServerToggleFlow(t *testing.T) {
 	}
 	if response.State != "recording" {
 		t.Fatalf("start state = %q, want recording", response.State)
+	}
+	if got := waitForNotification(t, notifications, "Recording"); got != "Recording" {
+		t.Fatalf("notification = %q", got)
 	}
 	response, err = Send(context.Background(), socket, "toggle")
 	if err != nil {
@@ -69,6 +74,21 @@ func TestServerToggleFlow(t *testing.T) {
 	cancel()
 	if err := <-done; err != nil {
 		t.Fatal(err)
+	}
+}
+
+func waitForNotification(t *testing.T, notifications <-chan string, want string) string {
+	t.Helper()
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case got := <-notifications:
+			if got == want {
+				return got
+			}
+		case <-deadline:
+			t.Fatalf("notification %q not received", want)
+		}
 	}
 }
 

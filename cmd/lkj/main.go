@@ -68,7 +68,7 @@ Usage:
   lkj setup [--config path]
   lkj once --file input.wav --model model.bin [options]
   lkj once --seconds 5 --model model.bin [options]
-  lkj listen [--out type] [options]
+  lkj listen [--out clipboard] [options]
   lkj start [listen options]
   lkj toggle [--socket path]
   lkj status [--socket path]
@@ -101,7 +101,7 @@ func listen(args []string) error {
 	model := fs.String("model", "", "model path")
 	language := fs.String("language", "", "language code")
 	threads := fs.Int("threads", 0, "whisper.cpp worker threads")
-	out := fs.String("out", "type", "output sink")
+	out := fs.String("out", "clipboard", "output sink")
 	url := fs.String("url", "", "http output url")
 	fileOut := fs.String("file-out", "", "file output path")
 	if err := fs.Parse(args); err != nil {
@@ -130,6 +130,7 @@ func listen(args []string) error {
 		Device:      cfg.RecordDevice,
 		Transcriber: transcriber,
 		Sink:        sink,
+		Notify:      output.Notify,
 	}).Serve(ctx)
 }
 
@@ -252,6 +253,11 @@ func doctor(args []string) error {
 		fmt.Println("warn", "clipboard_output", err)
 	} else {
 		fmt.Println("ok", "clipboard_output")
+	}
+	if err := output.CheckNotifications(); err != nil {
+		fmt.Println("warn", "notifications", err)
+	} else {
+		fmt.Println("ok", "notifications")
 	}
 	if strings.Contains(filepath.Base(cfg.ModelPath), "base.en") {
 		fmt.Println("warn model_memory base.en previously OOM-killed this machine; prefer ggml-tiny.en.bin")
