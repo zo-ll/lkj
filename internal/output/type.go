@@ -13,6 +13,14 @@ import (
 type Type struct{}
 
 func (Type) Send(ctx context.Context, value string) error {
+	wayland := os.Getenv("WAYLAND_DISPLAY") != ""
+	if runtime.GOOS == "linux" && wayland {
+		command, err := typingCommand(runtime.GOOS, true, exec.LookPath, value)
+		if err != nil {
+			return err
+		}
+		return runTypeCommand(ctx, command)
+	}
 	var nativeErr error
 	if runtime.GOOS == "linux" {
 		if err := typeLinux(ctx, value); err == nil {
@@ -21,13 +29,17 @@ func (Type) Send(ctx context.Context, value string) error {
 			nativeErr = err
 		}
 	}
-	command, err := typingCommand(runtime.GOOS, os.Getenv("WAYLAND_DISPLAY") != "", exec.LookPath, value)
+	command, err := typingCommand(runtime.GOOS, wayland, exec.LookPath, value)
 	if err != nil {
 		if nativeErr != nil {
 			return fmt.Errorf("Linux virtual keyboard unavailable (%v); %w", nativeErr, err)
 		}
 		return err
 	}
+	return runTypeCommand(ctx, command)
+}
+
+func runTypeCommand(ctx context.Context, command typeCommand) error {
 	cmd := exec.CommandContext(ctx, command.name, command.args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("type transcript with %s: %w: %s", command.name, err, output)
@@ -38,13 +50,18 @@ func (Type) Send(ctx context.Context, value string) error {
 // CheckType reports whether active-window typing is available without sending
 // any keyboard input.
 func CheckType() error {
+	wayland := os.Getenv("WAYLAND_DISPLAY") != ""
+	if runtime.GOOS == "linux" && wayland {
+		_, err := typingCommand(runtime.GOOS, true, exec.LookPath, "")
+		return err
+	}
 	if runtime.GOOS == "linux" {
 		device, err := os.OpenFile("/dev/uinput", os.O_WRONLY, 0)
 		if err == nil {
 			return device.Close()
 		}
 	}
-	_, err := typingCommand(runtime.GOOS, os.Getenv("WAYLAND_DISPLAY") != "", exec.LookPath, "")
+	_, err := typingCommand(runtime.GOOS, wayland, exec.LookPath, "")
 	return err
 }
 
@@ -57,6 +74,9 @@ func typingCommand(goos string, wayland bool, lookPath func(string) (string, err
 	switch goos {
 	case "linux":
 		if wayland {
+			if _, err := lookPath("eitype"); err == nil {
+				return typeCommand{name: "eitype", args: []string{"--", text}}, nil
+			}
 			if _, err := lookPath("wtype"); err == nil {
 				return typeCommand{name: "wtype", args: []string{text}}, nil
 			}
@@ -67,7 +87,7 @@ func typingCommand(goos string, wayland bool, lookPath func(string) (string, err
 		if _, err := lookPath("wtype"); err == nil {
 			return typeCommand{name: "wtype", args: []string{text}}, nil
 		}
-		return typeCommand{}, errors.New("typing output requires wtype (Wayland) or xdotool (X11)")
+		return typeCommand{}, errors.New("typing output requires eitype or wtype (Wayland), or xdotool (X11)")
 	case "darwin":
 		if _, err := lookPath("osascript"); err != nil {
 			return typeCommand{}, errors.New("typing output requires osascript")

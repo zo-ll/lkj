@@ -68,7 +68,7 @@ Usage:
   lkj setup [--config path]
   lkj once --file input.wav --model model.bin [options]
   lkj once --seconds 5 --model model.bin [options]
-  lkj listen [--out clipboard] [options]
+  lkj listen [--out paste] [options]
   lkj start [listen options]
   lkj toggle [--socket path]
   lkj status [--socket path]
@@ -85,7 +85,7 @@ Options for once:
   --model path         whisper.cpp ggml model path
   --language code      optional language code
   --threads n          whisper.cpp worker threads
-  --out name           output sink: stdout, type, http, file, clipboard
+  --out name           output sink: stdout, paste, clipboard, type, http, file
   --url url            HTTP sink URL
   --file-out path      file sink path
 `)
@@ -101,7 +101,7 @@ func listen(args []string) error {
 	model := fs.String("model", "", "model path")
 	language := fs.String("language", "", "language code")
 	threads := fs.Int("threads", 0, "whisper.cpp worker threads")
-	out := fs.String("out", "clipboard", "output sink")
+	out := fs.String("out", "paste", "output sink")
 	url := fs.String("url", "", "http output url")
 	fileOut := fs.String("file-out", "", "file output path")
 	if err := fs.Parse(args); err != nil {
@@ -140,9 +140,7 @@ func daemonCommand(command string, args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-	response, err := daemon.Send(ctx, *socket, command)
+	response, err := sendDaemonCommand(command, *socket, daemon.Send, daemonStart)
 	if err != nil {
 		return err
 	}
@@ -153,13 +151,36 @@ func daemonCommand(command string, args []string) error {
 	return nil
 }
 
+type daemonSender func(context.Context, string, string) (daemon.Response, error)
+
+func sendDaemonCommand(command, socket string, send daemonSender, start func([]string) error) (daemon.Response, error) {
+	sendOnce := func() (daemon.Response, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		return send(ctx, socket, command)
+	}
+
+	response, err := sendOnce()
+	if err == nil || command != "toggle" {
+		return response, err
+	}
+
+	// A desktop shortcut should be sufficient to use lkj after login. Start the
+	// daemon on the first toggle instead of requiring a separate startup step.
+	if startErr := start([]string{"--socket", socket}); startErr != nil {
+		return daemon.Response{}, fmt.Errorf("connect to daemon: %v; start daemon: %w", err, startErr)
+	}
+	return sendOnce()
+}
+
 func daemonStart(args []string) error {
 	socket := daemonSocketArg(args)
 	checkCtx, checkCancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	_, runningErr := daemon.Send(checkCtx, socket, "status")
 	checkCancel()
 	if runningErr == nil {
-		return fmt.Errorf("lkj daemon is already running at %s", socket)
+		fmt.Println("already running", socket)
+		return nil
 	}
 
 	executable, err := os.Executable()
@@ -191,7 +212,10 @@ func daemonStart(args []string) error {
 	_ = cmd.Process.Release()
 	_ = logFile.Close()
 
-	deadline := time.Now().Add(5 * time.Second)
+	// The first focused-input startup may wait for the user to approve the
+	// desktop Remote Control portal. Subsequent starts restore that grant and
+	// normally complete in well under a second.
+	deadline := time.Now().Add(2 * time.Minute)
 	for time.Now().Before(deadline) {
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		response, err := daemon.Send(ctx, socket, "status")
@@ -253,6 +277,11 @@ func doctor(args []string) error {
 		fmt.Println("warn", "clipboard_output", err)
 	} else {
 		fmt.Println("ok", "clipboard_output")
+	}
+	if err := output.CheckPaste(); err != nil {
+		fmt.Println("warn", "paste_output", err)
+	} else {
+		fmt.Println("ok", "paste_output")
 	}
 	if err := output.CheckNotifications(); err != nil {
 		fmt.Println("warn", "notifications", err)
@@ -415,6 +444,8 @@ func buildSink(cfg config.Config) (output.Sink, error) {
 		return output.File{Path: cfg.FilePath}, nil
 	case "type":
 		return output.Type{}, nil
+	case "paste":
+		return output.NewPaste()
 	case "clipboard":
 		return output.Clipboard{}, nil
 	default:

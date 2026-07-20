@@ -9,6 +9,7 @@ import (
 	"os"
 	"syscall"
 	"time"
+	"unsafe"
 )
 
 const (
@@ -19,6 +20,7 @@ const (
 	uiSetKeybit  = 0x40045565
 	uiDevCreate  = 0x5501
 	uiDevDestroy = 0x5502
+	uiDevSetup   = 0x405c5503
 	keyLeftCtrl  = 29
 	keyLeftShift = 42
 	keyU         = 22
@@ -35,6 +37,19 @@ type uinputUserDev struct {
 	AbsFlat      [64]int32
 }
 
+type inputID struct {
+	Bustype uint16
+	Vendor  uint16
+	Product uint16
+	Version uint16
+}
+
+type uinputSetup struct {
+	ID           inputID
+	Name         [80]byte
+	FFEffectsMax uint32
+}
+
 type inputEvent struct {
 	Time  syscall.Timeval
 	Type  uint16
@@ -43,30 +58,11 @@ type inputEvent struct {
 }
 
 func typeLinux(ctx context.Context, text string) error {
-	device, err := os.OpenFile("/dev/uinput", os.O_WRONLY|syscall.O_NONBLOCK, 0)
+	device, closeKeyboard, err := openLinuxKeyboard()
 	if err != nil {
 		return err
 	}
-	defer device.Close()
-	if err := ioctl(device.Fd(), uiSetEvbit, evKey); err != nil {
-		return err
-	}
-	for code := 1; code <= 255; code++ {
-		if err := ioctl(device.Fd(), uiSetKeybit, uintptr(code)); err != nil {
-			return err
-		}
-	}
-	var definition uinputUserDev
-	copy(definition.Name[:], "lkj virtual keyboard")
-	definition.ID = [4]uint16{3, 0x1, 0x1, 1}
-	if err := binary.Write(device, binary.LittleEndian, &definition); err != nil {
-		return err
-	}
-	if err := ioctl(device.Fd(), uiDevCreate, 0); err != nil {
-		return err
-	}
-	defer ioctl(device.Fd(), uiDevDestroy, 0)
-	time.Sleep(100 * time.Millisecond)
+	defer closeKeyboard()
 
 	for _, r := range text {
 		select {
@@ -96,6 +92,53 @@ func typeLinux(ctx context.Context, text string) error {
 		}
 	}
 	return nil
+}
+
+func openLinuxKeyboard() (*os.File, func(), error) {
+	device, err := os.OpenFile("/dev/uinput", os.O_WRONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := ioctl(device.Fd(), uiSetEvbit, evKey); err != nil {
+		device.Close()
+		return nil, nil, err
+	}
+	// Every key lkj emits (letters, digits, punctuation, modifiers, Enter,
+	// Tab, and Space) is in this range. Advertising unrelated power and
+	// RF-kill keys can cause udev/compositors to classify the device as a
+	// system-button device instead of a normal keyboard.
+	for code := 1; code <= 57; code++ {
+		if err := ioctl(device.Fd(), uiSetKeybit, uintptr(code)); err != nil {
+			device.Close()
+			return nil, nil, err
+		}
+	}
+	var setup uinputSetup
+	copy(setup.Name[:], "lkj virtual keyboard")
+	setup.ID = inputID{Bustype: 3, Vendor: 0x1, Product: 0x1, Version: 1}
+	if err := ioctl(device.Fd(), uiDevSetup, uintptr(unsafe.Pointer(&setup))); err != nil {
+		// UI_DEV_SETUP was added in Linux 4.5. Retain the legacy setup path
+		// for older kernels while preferring the modern Wayland-safe API.
+		var definition uinputUserDev
+		copy(definition.Name[:], setup.Name[:])
+		definition.ID = [4]uint16{setup.ID.Bustype, setup.ID.Vendor, setup.ID.Product, setup.ID.Version}
+		if writeErr := binary.Write(device, binary.LittleEndian, &definition); writeErr != nil {
+			device.Close()
+			return nil, nil, writeErr
+		}
+	}
+	if err := ioctl(device.Fd(), uiDevCreate, 0); err != nil {
+		device.Close()
+		return nil, nil, err
+	}
+	// KWin and other compositors discover uinput devices asynchronously. Keep
+	// the device quiet until it has appeared in the compositor's input list.
+	time.Sleep(750 * time.Millisecond)
+	closeKeyboard := func() {
+		_ = ioctl(device.Fd(), uiDevDestroy, 0)
+		_ = device.Close()
+	}
+	return device, closeKeyboard, nil
 }
 
 func typeUnicode(device *os.File, r rune) error {

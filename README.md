@@ -38,14 +38,15 @@ Implemented now:
 - `doctor` checks for runtime dependencies.
 - Basic silence/music-caption suppression for Whisper hallucinations.
 - Background daemon with local `toggle`, `cancel`, `status`, and `stop` controls.
+- Direct paste into the focused application, preserving Unicode and keyboard layouts.
 - Clipboard output on Linux, macOS, and Windows.
 - Desktop notifications for recording, transcription, clipboard delivery, and errors.
-- Optional active-window typing on Linux through `/dev/uinput`.
+- Portal-backed active-window typing on KDE/GNOME Wayland through `eitype`.
+- Optional raw active-window typing on X11 through `/dev/uinput` or `xdotool`.
 
 Not implemented yet:
 
 - push-to-talk hotkeys.
-- clipboard sink.
 - generic agent adapters.
 - bundled whisper.cpp binaries/models.
 
@@ -68,6 +69,17 @@ Install for the current user:
 ```bash
 make install
 ```
+
+For focused-app insertion on KDE or GNOME Wayland, install the small
+portal-backed typing helper:
+
+```bash
+cargo install eitype
+```
+
+The first daemon start opens the desktop's Remote Control authorization dialog
+before recording begins. Approve it with session restoration enabled; later
+starts and utterances reuse that permission.
 
 This installs `lkj` to `~/.local/bin/lkj` by default. Make sure `~/.local/bin` is on `PATH`:
 
@@ -127,8 +139,8 @@ bin/lkj once --seconds 5
 
 ## Voice input daemon
 
-Start `lkj` in the background. The daemon records from the configured device,
-transcribes locally, and copies the result to the clipboard:
+The daemon records from the configured device, transcribes locally, and inserts
+the result into the focused application. You can start it explicitly:
 
 ```bash
 lkj start
@@ -164,19 +176,21 @@ make install-shortcut
 
 This installs a KDE application shortcut for `Ctrl+Alt+B`. You can inspect or
 change it under **System Settings → Keyboard → Shortcuts**. The equivalent
-manual shortcut command is `/home/az/.local/bin/lkj toggle`.
+manual shortcut command is `~/.local/bin/lkj toggle`.
 
-Start the daemon once after login with `lkj start`, press the shortcut, speak,
-and press it again. Notifications show each state change. When the completion
-notification appears, paste the transcript anywhere with `Ctrl+V`.
+Press the shortcut, speak, and press it again. The first press after login
+starts the daemon automatically and begins recording. Notifications show each
+state change, and the transcript is pasted into the app that still has focus.
 
-Clipboard is the daemon default. To restore direct active-window typing, start
-it with `lkj start --out type`.
+Direct insertion is the daemon default. On KDE/GNOME Wayland it uses `eitype`,
+the desktop RemoteDesktop portal, and the compositor's active keyboard layout;
+it does not overwrite the clipboard. To copy without inserting, start it with
+`lkj start --out clipboard`. `lkj doctor` reports whether focused-app insertion
+is available.
 
-On Linux, optional active typing uses the kernel virtual-input device directly and adds
-no package dependency. `lkj doctor` reports whether `/dev/uinput` is writable.
-The current key mapping follows a US keyboard layout; non-ASCII text uses the
-standard Linux Unicode-entry sequence where the focused toolkit supports it.
+Raw key-by-key output remains available with `lkj start --out type`. On X11,
+the native `/dev/uinput` fallback uses a US key mapping; prefer the default
+portal-backed output on Wayland for layout-aware Unicode text.
 
 Send transcript to an agent HTTP endpoint:
 
@@ -245,7 +259,7 @@ cmd/lkj             CLI
 internal/config     JSON config
 internal/audio      recorder interface and wav source
 internal/stt        transcriber interface + whisper.cpp backend
-internal/output     sinks: stdout/file/http/clipboard later
+internal/output     sinks: stdout/file/http/clipboard/paste/type
 internal/pipeline   orchestration
 ```
 

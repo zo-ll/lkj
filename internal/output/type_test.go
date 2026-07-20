@@ -17,6 +17,17 @@ func TestTypingCommandPrefersWtypeOnWayland(t *testing.T) {
 	}
 }
 
+func TestTypingCommandPrefersEITypeOnWayland(t *testing.T) {
+	got, err := typingCommand("linux", true, foundCommands("eitype", "wtype", "xdotool"), "ciao, mondo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := typeCommand{name: "eitype", args: []string{"--", "ciao, mondo"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("command = %#v, want %#v", got, want)
+	}
+}
+
 func TestTypingCommandUsesXdotoolOnX11(t *testing.T) {
 	got, err := typingCommand("linux", false, foundCommands("xdotool"), "hello; $USER")
 	if err != nil {

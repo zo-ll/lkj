@@ -191,10 +191,10 @@ func (s *Server) finish(ctx context.Context, session Recording) Response {
 		return Response{State: "idle", Error: err.Error()}
 	}
 	if text == "" {
-		s.notify("No speech detected", "Clipboard was not changed")
+		s.notify("No speech detected", "No output was sent")
 		return Response{State: "idle", Message: "no speech detected"}
 	}
-	s.notify("Copied to clipboard", "Your transcript is ready to paste")
+	s.notify("Transcript delivered", "Your voice input is ready")
 	return Response{State: "idle", Message: "transcript delivered", Text: text}
 }
 
@@ -210,7 +210,7 @@ func (s *Server) cancelRecording() Response {
 	s.state = "idle"
 	s.mu.Unlock()
 	session.Cancel()
-	s.notify("Recording cancelled", "Clipboard was not changed")
+	s.notify("Recording cancelled", "No output was sent")
 	return Response{State: "idle", Message: "recording cancelled"}
 }
 

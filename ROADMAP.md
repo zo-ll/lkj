@@ -73,7 +73,7 @@ See [docs/frontend.md](docs/frontend.md).
 ## Later
 
 - [x] Clipboard sink.
-- Improve type-into-active-app keyboard layout support.
+- [x] Add keyboard-layout-safe active insertion through the Wayland RemoteDesktop portal.
 - Tray/desktop wrapper.
 - Bundled whisper.cpp binaries.
 - Optional GPU acceleration.
